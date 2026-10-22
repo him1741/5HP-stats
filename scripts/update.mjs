@@ -296,6 +296,37 @@ if (seasonStart) {
 const countingFrom = st.seasonStartedOn || st.trackingSince.slice(0, 10);
 const daysCounted = [...new Set([...history.days, today])].filter((d) => d >= countingFrom && (!seasonStart || d >= seasonStart)).sort();
 
+// --- Adjusted score exponent: damage ÷ max power^k.
+// k is chosen so account size has no overall effect on the score: it is the
+// slope of log(damage) against log(max power) across the alliance. It is
+// re-measured once per season, on the first run on or after day 8, from the
+// last full season's final leaderboard.
+function fitExponent(pairs) {
+  const pts = pairs.filter(([mp, d]) => mp > 0 && d > 0).map(([mp, d]) => [Math.log(mp), Math.log(d)]);
+  if (pts.length < 20) return null;
+  const mx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const my = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  const num = pts.reduce((s, [x, y]) => s + (x - mx) * (y - my), 0);
+  const den = pts.reduce((s, [x]) => s + (x - mx) ** 2, 0);
+  if (!den) return null;
+  return { k: num / den, players: pts.length };
+}
+st.adjusted ??= { exponent: config.adjustedExponent ?? 1.4, season: st.season, computedOn: today, basedOn: null, players: null };
+const recalcDay = config.adjustedRecalcDay ?? 8;
+const adjMin = (config.adjustedMinPowerT ?? 1) * 1e12;   // tiny accounts are left out of the Adjusted score
+if (dayNumber != null && dayNumber >= recalcDay && st.adjusted.season !== st.season) {
+  const prev = await readJson('prev-season.json', null);
+  const fit = prev?.rows ? fitExponent(prev.rows.map((r) => [r.maxPower ?? r.power, r.dmg]).filter(([mp]) => mp >= adjMin)) : null;
+  if (fit) {
+    const k = Math.min(2, Math.max(0.5, Math.round(fit.k * 100) / 100));   // keep it within a sane range
+    console.log(`Adjusted exponent re-measured from Season ${prev.season}: ${st.adjusted.exponent} → ${k} (${fit.players} players).`);
+    st.adjusted = { exponent: k, season: st.season, computedOn: today, basedOn: prev.season, players: fit.players };
+  } else {
+    console.log('Adjusted exponent: not enough data from last season to re-measure; keeping', st.adjusted.exponent);
+    st.adjusted.season = st.season;   // don't retry every run this season
+  }
+}
+
 const latest = {
   fetchedAt: now.toISOString(),
   gameDay: today,
@@ -311,6 +342,7 @@ const latest = {
     techLevel: alliance.techLevel ?? null, kvkWins: alliance.kvkWins ?? null,
   },
   scoreFormula: 'damage / maxPower',
+  adjusted: { ...st.adjusted, recalcDay, minPowerT: adjMin / 1e12 },
   inactiveDays: config.inactiveDays ?? 3,
   members: rows,
 };
