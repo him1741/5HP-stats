@@ -1,6 +1,6 @@
 # 5HP Alliance Stats
 
-A free website that tracks the FiveHitPoint [5HP] roster on KG 1737: power, daily PvP, season leaderboard, last season's final standings, inactive members, joins and leaves, and a history chart for every player.
+A free website that tracks the FiveHitPoint [5HP] roster on KG 1737: power, daily PvP, season leaderboard, last season's final standings, and a history chart for every player.
 
 It runs entirely on GitHub for free. Every 15 minutes GitHub reads the alliance from [KG Companion](https://kg.dbapp.ru/alliance/65e1dce66cf56451), works out who did how much damage, saves it, and republishes the site. You never need to leave a computer running.
 
@@ -51,12 +51,11 @@ From here it updates itself every 15 minutes. Nothing else to do.
 
 ## What to expect in the first days
 
-- **Roster, power, last online, inactive list:** filled immediately.
+- **Roster, power, last online:** filled immediately.
 - **Daily PvP:** counts from the first run. The first "full" day is the one after the next daily reset.
 - **Season leaderboard:** counts from the day you started tracking, and says so on the page. From next season on it covers the whole season.
 - **Last season:** fills in automatically the moment the season number changes.
 - **Player history charts:** one point per day, so they become useful after a few days.
-- **Joins & leaves:** recorded from the first run onward.
 
 The score is the same idea RISE uses: **PvP damage ÷ power^0.6**. Big accounts hit harder anyway, so this rewards effort for an account's size.
 
@@ -72,7 +71,6 @@ Open `config.json` in the repository, click the pencil icon, edit, and **Commit 
 | `resetHourUTC` | The hour (in UTC) of the in-game daily reset, so "today" starts at the right time. Default `0` (midnight UTC). |
 | `seasonStartDate` | Optional, like `"2026-10-05"`. Lets the header show "Week X · Day Y" straight away. Leave as `null` and it works it out from the next season change. |
 | `scoreExponent` | The `0.6` in the score formula. |
-| `inactiveDays` | How many days offline before someone shows on the Inactive tab. Default `3`. |
 | `historyDays` | How many days of history to keep for the charts. Default `180`. |
 
 The site's title, alliance tag and name come from the live data, so you don't have to edit the page itself.

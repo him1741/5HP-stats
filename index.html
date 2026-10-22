@@ -153,7 +153,7 @@ footer a { color: inherit; }
     <div class="stat"><label>Members</label><strong class="num" id="s-members">—</strong><small id="s-members-sub"></small></div>
     <div class="stat"><label>Alliance power</label><strong class="num" id="s-power">—</strong><small id="s-power-sub"></small></div>
     <div class="stat"><label>PvP damage today</label><strong class="num" id="s-daily">—</strong><small id="s-daily-sub"></small></div>
-    <div class="stat"><label>Inactive</label><strong class="num" id="s-inactive">—</strong><small id="s-inactive-sub"></small></div>
+    <div class="stat"><label>PvP damage this season</label><strong class="num" id="s-season">—</strong><small id="s-season-sub"></small></div>
   </section>
 
   <nav class="tabs" role="tablist" aria-label="Views">
@@ -161,8 +161,6 @@ footer a { color: inherit; }
     <button role="tab" data-view="daily" id="tab-daily">Daily PvP</button>
     <button role="tab" data-view="season" id="tab-season">Season</button>
     <button role="tab" data-view="last" id="tab-last">Last season</button>
-    <button role="tab" data-view="inactive" id="tab-inactive">Inactive</button>
-    <button role="tab" data-view="changes" id="tab-changes">Joins &amp; leaves</button>
   </nav>
 
   <div class="controls">
@@ -251,9 +249,8 @@ footer a { color: inherit; }
     const fighters = m.filter((x) => x.dailyDmg > 0).length;
     $('#s-daily').textContent = compact(daily);
     $('#s-daily-sub').textContent = `${fighters} of ${m.length} members have hit something`;
-    const inactive = m.filter((x) => (x.daysOffline ?? 0) >= L.inactiveDays);
-    $('#s-inactive').textContent = inactive.length;
-    $('#s-inactive-sub').textContent = `Offline ${L.inactiveDays}+ days`;
+    $('#s-season').textContent = compact(m.reduce((s, x) => s + x.seasonDmg, 0));
+    $('#s-season-sub').textContent = S.trackedFrom ? `Since tracking began ${fmtDate(S.trackedFrom)}` : `Season ${S.number}`;
   }
 
   // ---------- views ----------
@@ -314,30 +311,6 @@ footer a { color: inherit; }
       ],
       def: 'score',
     },
-    inactive: {
-      note: () => `Members offline ${data.latest.inactiveDays}+ days, or with no PvP damage this season. Deleted accounts are flagged.`,
-      rows: () => data.latest.members.filter((x) => (x.daysOffline ?? 0) >= data.latest.inactiveDays || x.seasonDmg === 0 || x.deleted),
-      cols: [
-        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
-        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: (x) => nameCell(x) + (x.deleted ? ' <span class="pill bad">Deleted</span>' : ''), asc: true },
-        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
-        { key: 'seen', label: 'Last online', get: (x) => x.daysOffline ?? 0, cell: (x) => lastSeen(x.daysOffline) },
-        { key: 'season', label: 'Season damage', r: 1, get: (x) => x.seasonDmg, cell: (x) => x.seasonDmg ? compact(x.seasonDmg) : '<span class="pill warn">None</span>' },
-      ],
-      def: 'seen',
-    },
-    changes: {
-      note: () => 'Who joined and who left, newest first. Starts from the day tracking began.',
-      rows: () => [...data.changes].reverse(),
-      cols: [
-        { key: 't', label: 'When', get: (x) => x.t, cell: (x) => `${fmtDate(x.t.slice(0, 10))} <span class="sub">${ago(x.t)}</span>` },
-        { key: 'type', label: '', get: (x) => x.type, cell: (x) => x.type === 'join' ? '<span class="pill ok">Joined</span>' : '<span class="pill bad">Left</span>' },
-        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: (x) => `<button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>`, asc: true },
-        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => x.rank ? rankCell(x.rank) : '—' },
-        { key: 'power', label: 'Power', r: 1, get: (x) => x.power ?? 0, cell: (x) => x.power ? powerT(x.power) : '—' },
-      ],
-      def: 't',
-    },
   };
 
   function render() {
@@ -360,7 +333,7 @@ footer a { color: inherit; }
     const ranked = col.key === 'score' && sort.dir < 0;
     $('#table tbody').innerHTML = rows.length ? rows.map((x, i) =>
       `<tr class="${ranked && i < 3 ? 'top' : ''}"><td class="pos r">${i + 1}</td>` + V.cols.map((c) => `<td class="${c.r ? 'r' : ''}">${c.cell(x, max)}</td>`).join('') + '</tr>'
-    ).join('') : `<tr><td class="empty" colspan="${V.cols.length + 1}">${view === 'changes' ? 'No joins or leaves recorded yet.' : view === 'last' ? 'No finished season yet.' : 'No players match.'}</td></tr>`;
+    ).join('') : `<tr><td class="empty" colspan="${V.cols.length + 1}">${view === 'last' ? 'No finished season yet.' : 'No players match.'}</td></tr>`;
   }
 
   // ---------- player drawer ----------
