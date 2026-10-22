@@ -3,13 +3,15 @@
 // .github/workflows/update.yml). No npm packages needed — plain Node 20+.
 //
 // What it keeps track of:
-//   * a "day baseline" (everyone's lifetime PvP damage at the daily reset)
+//   * a "day baseline" (everyone's PvP damage total at the daily reset)
 //   * a "season baseline" (the same, at the start of the season)
-// Daily / season damage = lifetime damage now − baseline. Lifetime damage is
+// Daily / season damage = total now − baseline. dbapp's total drops at each
+// season start, so a total that goes down is treated as a reset. The totals are
 // bigger than JavaScript numbers can hold exactly, so all subtraction uses BigInt.
 //
 // Test hooks (environment variables):
 //   FIXTURE=path/to/api-response.json   read this instead of calling dbapp
+//   FIXTURE_ACTIVITY=dir                read activity-current.json / activity-<n>.json from here
 //   NOW=2026-10-22T05:00:00Z            pretend it is this time
 //   DATA_DIR=path                       write somewhere other than ./data
 
@@ -17,6 +19,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { backfill } from './backfill.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, 'data');
@@ -40,6 +43,19 @@ const big = (v) => { try { return BigInt(String(v ?? '0')); } catch { return 0n;
 const nonNeg = (x) => (x < 0n ? 0n : x);
 const score = (dmg, power) => (power > 0 ? Number(dmg) / Math.pow(power, EXP) : 0);
 const round = (x, n = 2) => Math.round(x * 10 ** n) / 10 ** n;
+
+async function fetchText(url) {
+  if (process.env.FIXTURE_ACTIVITY) {
+    const s = new URL(url).searchParams.get('s');
+    return readFile(path.join(process.env.FIXTURE_ACTIVITY, `activity-${s || 'current'}.json`), 'utf8');
+  }
+  const res = await fetch(url, {
+    headers: { 'Accept': 'application/json', 'User-Agent': 'alliance-stats-tracker (GitHub Actions)' },
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
 
 async function fetchAlliance() {
   if (process.env.FIXTURE) return JSON.parse(await readFile(process.env.FIXTURE, 'utf8'));
@@ -96,6 +112,14 @@ const season = api?.server?.season ?? null;
 const snap = (m) => ({ pvp: String(m.pvpDamage ?? '0'), power: Number(m.power) || 0 });
 const byId = new Map(members.map((m) => [String(m.id), m]));
 
+// Seasons start on the same date for every server and last a fixed number of
+// days, so the current season's start is worked out from one known start date.
+const SEASON_LEN = config.seasonLengthDays || 28;
+const addDays = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 86400e3).toISOString().slice(0, 10);
+const curSeasonStart = config.seasonAnchorDate
+  ? addDays(config.seasonAnchorDate, Math.floor(daysBetween(config.seasonAnchorDate, today) / SEASON_LEN) * SEASON_LEN)
+  : null;
+
 let st = state;
 const firstRun = !st;
 if (firstRun) {
@@ -103,7 +127,8 @@ if (firstRun) {
     version: 1,
     trackingSince: now.toISOString(),
     season,
-    seasonStartedOn: null,        // unknown when tracking starts mid-season
+    seasonKey: curSeasonStart,
+    seasonStartedOn: curSeasonStart === today ? today : null,   // null = tracking began mid-season
     day: today,
     dayBaseline: {},
     seasonBaseline: {},
@@ -117,8 +142,14 @@ if (firstRun) {
   console.log(`First run: baselines saved for ${byId.size} members.`);
 }
 
+// Older data files predate seasonKey; adopt the current season without a rollover.
+if (st.seasonKey === undefined) st.seasonKey = curSeasonStart;
+
 // --- Season rollover: freeze the leaderboard, then start fresh.
-if (!firstRun && season != null && st.season != null && season !== st.season) {
+// With a known season calendar the date decides; otherwise dbapp's season number does.
+const dateRoll = !!(curSeasonStart && st.seasonKey && curSeasonStart !== st.seasonKey);
+const numberRoll = !curSeasonStart && season != null && st.season != null && season !== st.season;
+if (!firstRun && (dateRoll || numberRoll)) {
   const rows = [];
   for (const [id, base] of Object.entries(st.seasonBaseline)) {
     const m = byId.get(id);
@@ -138,9 +169,12 @@ if (!firstRun && season != null && st.season != null && season !== st.season) {
   await writeJson('prev-season.json', {
     season: st.season, from: st.seasonStartedOn ?? st.trackingSince.slice(0, 10), to: today, rows,
   });
-  console.log(`Season ${st.season} → ${season}: froze ${rows.length} rows.`);
-  st.season = season;
-  st.seasonStartedOn = today;
+  // dbapp may switch its season number a little early or late; never go backwards.
+  const next = dateRoll ? (season != null && season > st.season ? season : st.season + 1) : season;
+  console.log(`Season ${st.season} → ${next}: froze ${rows.length} rows.`);
+  st.season = next;
+  st.seasonKey = curSeasonStart;
+  st.seasonStartedOn = curSeasonStart || today;
   st.seasonBaseline = {};
   for (const [id, m] of byId) st.seasonBaseline[id] = { ...snap(m), since: today };
 }
@@ -205,6 +239,21 @@ if (!firstRun) {
   if (changes.length > MAX_CHANGES) changes = changes.slice(-MAX_CHANGES);
 }
 
+// --- One-time import of past days from KG Companion's Activity page.
+if (!st.backfilled && config.importHistory !== false) {
+  try {
+    const prev = await backfill({
+      config, st, history, members, today, seasonStart: curSeasonStart,
+      score, round, addDays, fetchText, log: (msg) => console.log(msg),
+    });
+    const existingPrev = await readJson('prev-season.json', null);
+    if (prev && !existingPrev) await writeJson('prev-season.json', prev);
+    st.backfilled = now.toISOString();
+  } catch (e) {
+    console.warn(`History import skipped this run (${e.message}); will try again next run.`);
+  }
+}
+
 // --- Build the rows the site displays.
 const rows = members.map((m) => {
   const id = String(m.id);
@@ -235,18 +284,25 @@ const rows = members.map((m) => {
   };
 });
 
-const seasonStart = config.seasonStartDate || st.seasonStartedOn;
-let week = null, dayOfWeek = null;
+// Week 0 is the rest week (days 1–7), then Weeks 1–3, matching the in-game calendar.
+const seasonStart = curSeasonStart || config.seasonStartDate || st.seasonStartedOn;
+let week = null, dayOfWeek = null, dayNumber = null;
 if (seasonStart) {
   const d = daysBetween(seasonStart, today);
-  if (d >= 0) { week = Math.floor(d / 7) + 1; dayOfWeek = (d % 7) + 1; }
+  if (d >= 0) { dayNumber = d + 1; week = Math.floor(d / 7); dayOfWeek = (d % 7) + 1; }
 }
+const countingFrom = st.seasonStartedOn || st.trackingSince.slice(0, 10);
+const daysCounted = [...new Set([...history.days, today])].filter((d) => d >= countingFrom && (!seasonStart || d >= seasonStart)).sort();
 
 const latest = {
   fetchedAt: now.toISOString(),
   gameDay: today,
   trackingSince: st.trackingSince,
-  season: { number: st.season, startedOn: seasonStart || null, week, day: dayOfWeek, trackedFrom: st.seasonStartedOn ? null : st.trackingSince.slice(0, 10) },
+  season: {
+    number: st.season, startedOn: seasonStart || null, length: SEASON_LEN, dayNumber, week, day: dayOfWeek,
+    countingFrom, partial: !st.seasonStartedOn, daysCounted,
+    trackedFrom: st.seasonStartedOn ? null : st.trackingSince.slice(0, 10),
+  },
   alliance: {
     id: alliance.id, name: alliance.name, tag: alliance.label, server: alliance.serverId,
     power: Number(alliance.power) || 0, members: members.length, maxMembers: alliance.maxMembers ?? null,

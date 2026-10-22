@@ -401,7 +401,7 @@ footer a { color: var(--ink-2); }
     let html = `<button class="x" id="close" aria-label="Close">×</button><h2 id="p-name">${esc(name)}</h2>`;
     if (m) {
       html += `<p class="sub">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()}</p>`;
-      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', compact(m.dailyDmg), 'Score ' + compact(m.dailyScore))}${kv('This season', compact(m.seasonDmg), 'Score ' + compact(m.seasonScore))}${kv('Lifetime PvP', compact(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
+      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', compact(m.dailyDmg), 'Score ' + compact(m.dailyScore))}${kv('This season', compact(m.seasonDmg), 'Score ' + compact(m.seasonScore))}${kv('PvP total (KG Companion)', compact(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
     } else {
       html += '<p class="note">No longer in the alliance.</p>';
     }
