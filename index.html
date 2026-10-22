@@ -95,10 +95,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .day { width: 34px; height: 30px; display: grid; place-items: center; border-radius: 6px; font-size: 14px; font-variant-numeric: tabular-nums; border: 1px solid var(--line); color: var(--muted); background: var(--day-off); }
 .day.on { background: var(--day-on); border-color: var(--day-on-line); color: var(--day-on-ink); }
 .day.future { background: transparent; border-style: dashed; }
+.day[data-day] { cursor: pointer; user-select: none; }
+.day[data-day]:hover { filter: brightness(1.25); }
+.day.off { background: transparent; border-color: #b4505a; border-style: dashed; color: #d98a92; text-decoration: line-through; }
+.cal-note { font-size: 13px; color: var(--muted); margin: 2px 0 8px; }
+.cal-reset { font: inherit; font-size: 13px; margin-left: 10px; padding: 2px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--day-off); color: var(--ink); cursor: pointer; }
 .day.today { outline: 2px solid var(--today); outline-offset: 1px; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 4px; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); background: var(--day-off); }
 .legend i.on { background: var(--day-on); border-color: var(--day-on-line); }
+.legend i.off { background: transparent; border: 1px dashed #b4505a; }
 @media (max-width: 560px) { .cal-row { grid-template-columns: 1fr; gap: 4px; } }
 
 /* Table */
@@ -259,6 +265,7 @@ footer a { color: var(--ink-2); }
     ]);
     if (!latest) { $('#updated').textContent = 'No data yet. The first update runs within 15 minutes of setup.'; return; }
     data = { latest, history, changes: changes || [], prev };
+    loadExcluded();
     renderHeader(); render();
   }
 
@@ -295,6 +302,37 @@ footer a { color: var(--ink-2); }
   const seen = (d) => d == null ? '—' : d === 0 ? '<span class="seen-ok">Today</span>' : d < 3 ? `<span class="seen-ok">${d}d ago</span>` : d < 7 ? `<span class="seen-warn">${d}d ago</span>` : `<span class="seen-bad">${d}d ago</span>`;
   const formulaBox = () => `<div class="formula"><code>Activity = PvP Damage ÷ Max Power</code><p>The same activity score the game and KG Companion use: a higher score means more fighting for the account's size. Damage is shown in brackets.</p><code class="second">Adjusted = PvP Damage ÷ Max Power<sup>${adjExp()}</sup></code><p>In this alliance, bigger accounts deal more than proportionally more damage, so even Activity ranks big accounts higher. Dividing by max power to the ${adjExp()} instead removes that: the exponent is the value at which account size has no overall effect on the score, measured from our own players' damage and power. Big and small accounts then spread evenly through the rankings, and what's left is how hard each player fought for their size. Accounts under ${adjMinT()}T max power show — and aren't ranked by Adjusted: at that size the formula would lift them to the top on very small totals. ${adjNote()} Both use damage and max power in T. Click a column heading to sort by it.</p></div>`;
 
+  // ---------- excluded days (this browser only) ----------
+  // Tap a counted day in the calendar to leave it out of the season totals. Per-day damage comes from history.json
+  // (checked against the tracker's own season totals), plus today's running damage.
+  const exclKey = () => 'excl:' + (data.latest?.season?.number ?? 0);
+  let excluded = new Set();
+  const loadExcluded = () => {
+    const S = data.latest?.season, ok = new Set(S?.daysCounted || []);
+    excluded = new Set((store.get(exclKey(), []) || []).filter((d) => ok.has(d)));
+    seasonCache = new Map();
+  };
+  let seasonCache = new Map();
+  function seasonOf(x) {
+    if (!excluded.size) return { dmg: x.seasonDmg, score: x.seasonScore };
+    let r = seasonCache.get(x.id);
+    if (r) return r;
+    const H = data.history, S = data.latest.season, today = data.latest.gameDay;
+    const h = H?.players?.[String(x.id)], days = H?.days || [];
+    let dmg = excluded.has(today) ? 0 : (x.dailyDmg || 0);
+    if (h) {
+      const off = days.length - h.d.length;
+      for (let i = 0; i < days.length; i++) {
+        const d = days[i];
+        if (d < S.countingFrom || d < S.startedOn || excluded.has(d)) continue;
+        dmg += h.d[i - off] || 0;
+      }
+    }
+    r = { dmg, score: x.maxPower > 0 ? Math.round(dmg / x.maxPower * 100) / 100 : 0 };
+    seasonCache.set(x.id, r);
+    return r;
+  }
+
   function calendar() {
     const S = data.latest.season;
     if (!S.startedOn) return '';
@@ -304,15 +342,17 @@ footer a { color: var(--ink-2); }
       const days = [];
       for (let i = w * 7; i < Math.min(S.length, w * 7 + 7); i++) {
         const d = addDays(S.startedOn, i);
-        const cls = d > today ? 'future' : counted.has(d) ? 'on' : '';
-        days.push(`<span class="day ${cls}${d === today ? ' today' : ''}" title="${fmtDate(d)}">${Number(d.slice(8))}</span>`);
+        const cls = d > today ? 'future' : counted.has(d) ? (excluded.has(d) ? 'off' : 'on') : '';
+        const tap = counted.has(d) ? ` data-day="${d}" role="button" tabindex="0"` : '';
+        days.push(`<span class="day ${cls}${d === today ? ' today' : ''}" title="${fmtDate(d)}${counted.has(d) ? (excluded.has(d) ? ' — excluded (tap to count)' : ' — tap to exclude') : ''}"${tap}>${Number(d.slice(8))}</span>`);
       }
       const label = w === 0 ? `Rest week (days 1–7)` : `Week ${w} (days ${w * 7 + 1}–${w * 7 + 7})`;
       rows.push(`<div class="cal-row"><span>${label}</span><div class="days">${days.join('')}</div></div>`);
     }
-    const n = counted.size, sofar = S.dayNumber || 0;
-    return `<div class="cal"><div class="cal-title">📅 <b>${n} of ${sofar}</b> days counted this season</div>${rows.join('')}
-      <div class="legend"><span><i class="on"></i>Counted</span><span><i></i>Before tracking began</span><span>Gold outline = today</span></div></div>`;
+    const n = counted.size - excluded.size, sofar = S.dayNumber || 0;
+    const note = excluded.size ? `<div class="cal-note">${excluded.size} day${excluded.size === 1 ? '' : 's'} left out of the totals below. Saved in this browser only.<button class="cal-reset" data-reset>Count all days</button></div>` : '<div class="cal-note">Tap a day to leave it out of the season totals.</div>';
+    return `<div class="cal"><div class="cal-title">📅 <b>${n} of ${sofar}</b> days counted this season</div>${note}${rows.join('')}
+      <div class="legend"><span><i class="on"></i>Counted</span><span><i class="off"></i>Excluded</span><span><i></i>Before tracking began</span><span>Gold outline = today</span></div></div>`;
   }
 
   // ---------- views ----------
@@ -345,11 +385,11 @@ footer a { color: var(--ink-2); }
       refresh: 'Refreshes every ~15 minutes',
       counting: () => {
         const S = data.latest.season;
-        return `Counting from ${S.countingFrom} 00:00 UTC` + (S.partial ? ` · tracking started part-way through this season` : '');
+        return `Counting from ${S.countingFrom} 00:00 UTC` + (S.partial ? ` · tracking started part-way through this season` : '') + (excluded.size ? ` · ${excluded.size} day${excluded.size === 1 ? '' : 's'} excluded` : '');
       },
       extra: () => formulaBox() + calendar(),
       rows: () => data.latest.members,
-      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.seasonScore, cell: (x) => scoreCell(x.seasonScore, x.seasonDmg) }, adjCol((x) => x.seasonDmg, (x) => x.maxPower)],
+      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => seasonOf(x).score, cell: (x) => scoreCell(seasonOf(x).score, seasonOf(x).dmg) }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower)],
       def: 'score', medals: true,
     },
     last: {
@@ -464,6 +504,22 @@ footer a { color: var(--ink-2); }
       store.set('sorts2', sorts); render(); return;
     }
     const n = e.target.closest('.name-btn'); if (n) openPlayer(n.dataset.id);
+  });
+  const toggleDay = (el) => {
+    const d = el.dataset.day;
+    if (!d) return;
+    excluded.has(d) ? excluded.delete(d) : excluded.add(d);
+    seasonCache = new Map();
+    store.set(exclKey(), [...excluded]);
+    render();
+  };
+  $('#sec-extra').addEventListener('click', (e) => {
+    if (e.target.closest('[data-reset]')) { excluded = new Set(); seasonCache = new Map(); store.set(exclKey(), []); render(); return; }
+    const el = e.target.closest('.day[data-day]'); if (el) toggleDay(el);
+  });
+  $('#sec-extra').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const el = e.target.closest('.day[data-day]'); if (el) { e.preventDefault(); toggleDay(el); }
   });
   $('#drawer').addEventListener('click', (e) => { if (e.target.id === 'close') closePlayer(); });
   $('#scrim').addEventListener('click', closePlayer);
