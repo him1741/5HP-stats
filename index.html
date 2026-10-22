@@ -6,179 +6,198 @@
 <!--ARTIFACT-START-->
 <title>5HP Alliance Stats</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-/* Layout: alliance banner → summary strip → tab bar with filters → one sortable ledger table; player drawer slides from the right. */
+/* Layout: slim brand bar → season heading → rank filter + tabs → one section per tab (title, formula panel, season calendar, ledger table). Dark only, to match RISE. */
 :root {
-  --bg: #eef1f6;
-  --surface: #ffffff;
-  --ink: #17202d;
-  --muted: #5b6678;
-  --line: #d6dce6;
-  --band: #1d2a3d;
-  --band-ink: #f2f4f8;
-  --gold: #9a6a08;
-  --gold-soft: #f6ead0;
-  --r5: #9a6a08; --r4: #7044a8; --r3: #2a6bb0; --r2: #2f8a6a; --r1: #6d7686;
-  --good: #23824f; --warn: #b26b00; --bad: #b3332f;
-  --bar: #2a6bb0;
-  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
-  --font-body: "Barlow", "Segoe UI", system-ui, sans-serif;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #10161f; --surface: #172030; --ink: #e7ebf2; --muted: #95a1b4; --line: #27334a;
-    --band: #0b1018; --band-ink: #f2f4f8; --gold: #e2b44f; --gold-soft: #33290f;
-    --r5: #e2b44f; --r4: #b28ae6; --r3: #6aa8ea; --r2: #5cc39b; --r1: #9aa4b5;
-    --good: #4cc282; --warn: #e3a23a; --bad: #ef6b66; --bar: #6aa8ea;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #10161f; --surface: #172030; --ink: #e7ebf2; --muted: #95a1b4; --line: #27334a;
-  --band: #0b1018; --band-ink: #f2f4f8; --gold: #e2b44f; --gold-soft: #33290f;
-  --r5: #e2b44f; --r4: #b28ae6; --r3: #6aa8ea; --r2: #5cc39b; --r1: #9aa4b5;
-  --good: #4cc282; --warn: #e3a23a; --bad: #ef6b66; --bar: #6aa8ea;
+  --bg: #0f1226;
+  --bar: #151a33;
+  --panel: #161b36;
+  --panel-2: #1c2244;
+  --line: #2a3160;
+  --ink: #eef0fa;
+  --ink-2: #b9bfdc;
+  --muted: #8a91b8;
+  --violet: #a99cf5;
+  --violet-strong: #8a78f0;
+  --cyan: #7fd3f7;
+  --chip: #1d2a55;
+  --chip-line: #3b5bb5;
+  --chip-ink: #9ec3ff;
+  --gold: #f6c94c; --silver: #d9dde8; --bronze: #ef8a3c;
+  --r5-bg: #3a2463; --r5: #d0b4ff;
+  --r4-bg: #1d3566; --r4: #8fbaff;
+  --r3-bg: #183d2c; --r3: #7fdc9f;
+  --r2-bg: #173a40; --r2: #7fd6d6;
+  --r1-bg: #2a2f45; --r1: #b9bfd6;
+  --day-on: #1f5a34; --day-on-line: #3fa765; --day-on-ink: #c9f5d7;
+  --day-off: #1a1f3a; --today: #f6c94c;
+  --font: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font-body); }
-.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bar); }
+.wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .num { font-variant-numeric: tabular-nums; }
 
-/* Banner */
-.banner { background: var(--band); color: var(--band-ink); }
-.banner .wrap { padding-block: 22px 18px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; justify-content: space-between; }
-.title h1 { margin: 0; font: 700 clamp(30px, 6vw, 44px)/1 var(--font-display); letter-spacing: .02em; text-wrap: balance; }
-.title h1 .tag { color: var(--gold); }
-.title p { margin: 6px 0 0; color: color-mix(in srgb, var(--band-ink) 72%, transparent); font-size: 14px; }
-.season { text-align: right; min-width: 0; }
-.season b { display: block; font: 600 20px/1.1 var(--font-display); letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
-.season span { font-size: 13px; color: color-mix(in srgb, var(--band-ink) 72%, transparent); }
-.demo { background: var(--gold-soft); color: var(--ink); font-size: 14px; }
-.demo .wrap { padding-block: 9px; }
+/* Brand bar */
+.topbar { background: var(--bar); border-bottom: 1px solid var(--line); }
+.topbar .wrap { padding-block: 14px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.brand b { display: block; font-size: 20px; font-weight: 600; color: var(--cyan); letter-spacing: .02em; line-height: 1.1; }
+.brand span { display: block; font-size: 11px; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); }
+#google_translate_element { min-height: 28px; }
+#google_translate_element select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font: 15px var(--font); }
+.goog-te-gadget { color: var(--muted) !important; font-size: 0 !important; }
+.goog-te-gadget > span { display: none; }
 
-/* Summary strip */
-.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 18px; }
-.stat { background: var(--surface); padding: 12px 14px; min-width: 0; }
-.stat label { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.stat strong { font: 600 26px/1.15 var(--font-display); }
-.stat small { display: block; color: var(--muted); font-size: 12.5px; }
-@media (max-width: 640px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .season { text-align: left; } }
+/* Season heading */
+.head { padding-block: 26px 6px; }
+.head h1 { margin: 0; font-size: clamp(26px, 5vw, 32px); font-weight: 700; line-height: 1.15; text-wrap: balance; }
+.head h1 small { font-size: 17px; font-weight: 400; color: var(--ink-2); margin-left: 10px; white-space: nowrap; }
+.meta { margin-top: 6px; color: var(--muted); font-size: 14.5px; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.meta b { color: var(--ink-2); font-weight: 600; }
+.demo { margin-top: 14px; padding: 10px 14px; border: 1px solid #6b5a1e; background: #2a2410; color: #f3e3a8; border-radius: 10px; font-size: 14.5px; }
 
-/* Tabs + controls */
-.tabs { display: flex; gap: 4px; overflow-x: auto; margin-top: 22px; border-bottom: 1px solid var(--line); scrollbar-width: none; }
-.tabs button { flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 9px 12px 8px; font: 600 17px/1 var(--font-display); letter-spacing: .03em; color: var(--muted); cursor: pointer; }
-.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--gold); }
-.tabs button:focus-visible, .chip:focus-visible, th button:focus-visible, .name-btn:focus-visible, .x:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding-block: 14px 10px; }
-.chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.chip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 4px 11px; font: 600 13px/1.2 var(--font-body); cursor: pointer; }
-.chip[aria-pressed="true"] { color: var(--ink); border-color: currentColor; }
-.chip[aria-pressed="true"][data-rank="R5"] { color: var(--r5); } .chip[aria-pressed="true"][data-rank="R4"] { color: var(--r4); }
-.chip[aria-pressed="true"][data-rank="R3"] { color: var(--r3); } .chip[aria-pressed="true"][data-rank="R2"] { color: var(--r2); }
-.chip[aria-pressed="true"][data-rank="R1"] { color: var(--r1); }
-.search { flex: 1 1 200px; max-width: 280px; }
-.search input { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 10px; font: inherit; }
-.note { color: var(--muted); font-size: 13.5px; margin: 0 0 10px; max-width: 70ch; }
-.note code { font-size: 12.5px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+/* Filters + tabs */
+.show { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+.show > span { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
+.chip { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; min-width: 50px; padding: 5px 12px; font: 600 15px/1.2 var(--font); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--chip); border-color: var(--chip-line); color: var(--chip-ink); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px 28px; margin-top: 16px; border-bottom: 1px solid var(--line); }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 10px 2px; font: 600 15px/1.2 var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--violet); cursor: pointer; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--violet-strong); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* Section */
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-top: 26px; }
+.section-head h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #dcd6ff; }
+.section-head .refresh { font-size: 14px; font-style: italic; color: var(--muted); }
+.counting { margin: 4px 0 0; color: var(--ink-2); font-size: 15px; }
+.formula { margin-top: 16px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 14px 16px; }
+.formula code { display: block; font: 600 16px/1.4 var(--mono); color: var(--cyan); margin-bottom: 6px; }
+.formula p { margin: 0; color: var(--ink-2); font-size: 15px; max-width: 72ch; }
+.search { display: block; margin-top: 16px; max-width: 320px; }
+.search input { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font: 16px var(--font); }
+.search input::placeholder { color: var(--muted); }
+
+/* Season calendar */
+.cal { margin-top: 18px; }
+.cal-title { font-size: 15.5px; color: var(--ink); margin-bottom: 10px; }
+.cal-title b { color: var(--day-on-ink); }
+.cal-row { display: grid; grid-template-columns: minmax(0, 190px) auto; align-items: center; gap: 10px; margin-bottom: 7px; }
+.cal-row > span { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--violet); }
+.days { display: flex; gap: 6px; flex-wrap: wrap; }
+.day { width: 34px; height: 30px; display: grid; place-items: center; border-radius: 6px; font-size: 14px; font-variant-numeric: tabular-nums; border: 1px solid var(--line); color: var(--muted); background: var(--day-off); }
+.day.on { background: var(--day-on); border-color: var(--day-on-line); color: var(--day-on-ink); }
+.day.future { background: transparent; border-style: dashed; }
+.day.today { outline: 2px solid var(--today); outline-offset: 1px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); background: var(--day-off); }
+.legend i.on { background: var(--day-on); border-color: var(--day-on-line); }
+@media (max-width: 560px) { .cal-row { grid-template-columns: 1fr; gap: 4px; } }
 
 /* Table */
-.table-box { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.table-box { margin-top: 18px; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { padding: 8px 12px; text-align: left; white-space: nowrap; }
-th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); }
+th, td { padding: 13px 16px; text-align: left; white-space: nowrap; }
+th { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); background: var(--panel-2); border-bottom: 1px solid var(--line); }
 th button { all: unset; cursor: pointer; }
-th button::after { content: ""; margin-left: 4px; }
-th[aria-sort="descending"] button::after { content: "▼"; font-size: 9px; }
-th[aria-sort="ascending"] button::after { content: "▲"; font-size: 9px; }
-th.r, td.r { text-align: right; }
-tbody tr { border-top: 1px solid var(--line); }
-tbody tr:first-child { border-top: 0; }
-tbody tr:hover { background: color-mix(in srgb, var(--gold) 6%, transparent); }
-td.pos { color: var(--muted); width: 1%; }
-.top td.pos { color: var(--gold); font-weight: 600; }
-.rank { display: inline-block; min-width: 30px; text-align: center; font: 600 12px/1.6 var(--font-body); border-radius: 5px; padding: 0 5px; border: 1px solid currentColor; }
-.rank.R5 { color: var(--r5); } .rank.R4 { color: var(--r4); } .rank.R3 { color: var(--r3); } .rank.R2 { color: var(--r2); } .rank.R1 { color: var(--r1); }
-.name-btn { all: unset; cursor: pointer; font-weight: 600; }
+th[aria-sort="descending"] button::after { content: " ▼"; font-size: 10px; }
+th[aria-sort="ascending"] button::after { content: " ▲"; font-size: 10px; }
+td { font-size: 16px; color: var(--ink); }
+tbody tr + tr { border-top: 1px solid var(--line); }
+tbody tr:hover { background: var(--panel-2); }
+td.pos { width: 1%; color: var(--ink-2); }
+.medal { display: block; font-size: 17px; line-height: 1; margin-bottom: 2px; }
+tr.gold .name-btn, tr.gold .pw { color: var(--gold); }
+tr.silver .name-btn, tr.silver .pw { color: var(--silver); }
+tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
+.rank { display: inline-block; min-width: 34px; text-align: center; font-size: 13px; font-weight: 700; line-height: 1; padding: 5px 7px; border-radius: 5px; }
+.rank.R5 { background: var(--r5-bg); color: var(--r5); } .rank.R4 { background: var(--r4-bg); color: var(--r4); }
+.rank.R3 { background: var(--r3-bg); color: var(--r3); } .rank.R2 { background: var(--r2-bg); color: var(--r2); }
+.rank.R1 { background: var(--r1-bg); color: var(--r1); }
+.name-btn { all: unset; cursor: pointer; font-weight: 500; }
 .name-btn:hover { text-decoration: underline; }
-.flag { margin-right: 6px; }
-.sub { color: var(--muted); font-size: 12.5px; margin-left: 6px; }
-.score-cell b { font-weight: 600; }
-.meter { display: inline-block; vertical-align: middle; width: 70px; height: 6px; border-radius: 3px; background: var(--line); margin-left: 10px; overflow: hidden; }
-.meter i { display: block; height: 100%; background: var(--bar); }
-.pill { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 8px; }
-.pill.ok { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
-.pill.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
-.pill.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
-.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
-footer { color: var(--muted); font-size: 13px; padding-block: 22px 32px; }
-footer a { color: inherit; }
+.dmg { color: var(--muted); margin-left: 6px; }
+.seen-ok { color: var(--r3); } .seen-warn { color: #f0b45a; } .seen-bad { color: #ff8a80; }
+.empty { padding: 30px 16px; text-align: center; color: var(--muted); white-space: normal; }
+@media (max-width: 560px) {
+  th, td { padding: 11px 7px; }
+  th { font-size: 11.5px; letter-spacing: .04em; }
+  td { font-size: 15px; }
+  th:first-child, td:first-child { padding-left: 12px; }
+  .dmg { display: block; margin: 0; font-size: 13px; }
+  th { white-space: normal; vertical-align: bottom; }
+  .tabs { gap: 0 18px; }
+}
+footer { color: var(--muted); font-size: 14px; padding-block: 26px 36px; }
+footer a { color: var(--ink-2); }
 
-/* Player drawer */
-.scrim { position: fixed; inset: 0; background: rgb(8 12 18 / .45); z-index: 20; }
-.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); background: var(--surface); border-left: 1px solid var(--line); z-index: 21; overflow-y: auto;
-  padding: calc(18px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 18px; }
-.drawer h2 { margin: 0; font: 700 30px/1.05 var(--font-display); overflow-wrap: anywhere; }
-.drawer .x { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; width: 34px; height: 34px; font-size: 18px; cursor: pointer; }
-.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 16px 0 6px; }
+/* Player panel */
+.scrim { position: fixed; inset: 0; background: rgb(4 6 16 / .6); z-index: 20; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); background: var(--panel); border-left: 1px solid var(--line); z-index: 21; overflow-y: auto;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 20px; }
+.drawer h2 { margin: 0 44px 0 0; font-size: 26px; line-height: 1.15; overflow-wrap: anywhere; }
+.drawer .x { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); border-radius: 8px; width: 36px; height: 36px; font-size: 20px; cursor: pointer; }
+.drawer .sub { color: var(--ink-2); font-size: 15px; margin: 8px 0 0; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; margin: 18px 0 4px; }
 .kv div { min-width: 0; }
-.kv label { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.kv span { font: 600 19px/1.2 var(--font-display); }
-.chart-title { font: 600 15px/1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 20px 0 6px; }
+.kv label { display: block; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
+.kv span { font-size: 19px; font-weight: 600; }
+.kv small { display: block; color: var(--muted); font-size: 13.5px; }
+.chart-title { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); margin: 22px 0 6px; }
 .chart svg { width: 100%; height: auto; display: block; }
-.chart text { fill: var(--muted); font: 11px var(--font-body); }
+.chart text { fill: var(--muted); font: 11px var(--font); }
+.drawer .note { color: var(--muted); font-size: 14.5px; }
+.drawer a { color: var(--chip-ink); }
 @media (prefers-reduced-motion: no-preference) { .drawer { animation: slide .18s ease-out; } @keyframes slide { from { transform: translateX(24px); opacity: .6; } } }
 </style>
 <!--ARTIFACT-HEAD-END-->
 </head>
 <body>
 <!--ARTIFACT-BODY-START-->
-<header class="banner">
+<header class="topbar">
   <div class="wrap">
-    <div class="title">
-      <h1 id="heading"><span class="tag">[5HP]</span> FiveHitPoint</h1>
-      <p id="subhead">KG 1737 · Alliance statistics</p>
-    </div>
-    <div class="season"><b id="season-label">Season —</b><span id="updated">Loading…</span></div>
+    <div class="brand"><b id="brand-tag">5HP</b><span id="brand-sub">Stats · KG 1737</span></div>
+    <div id="google_translate_element"></div>
   </div>
 </header>
-<div class="demo" id="demo-banner" hidden><div class="wrap">Preview: the roster is real (pulled Oct 22). Daily and season damage are simulated so you can see how the tables fill in once tracking runs.</div></div>
 
 <main class="wrap">
-  <section class="summary" aria-label="Alliance summary">
-    <div class="stat"><label>Members</label><strong class="num" id="s-members">—</strong><small id="s-members-sub"></small></div>
-    <div class="stat"><label>Alliance power</label><strong class="num" id="s-power">—</strong><small id="s-power-sub"></small></div>
-    <div class="stat"><label>PvP damage today</label><strong class="num" id="s-daily">—</strong><small id="s-daily-sub"></small></div>
-    <div class="stat"><label>PvP damage this season</label><strong class="num" id="s-season">—</strong><small id="s-season-sub"></small></div>
+  <section class="head">
+    <h1><span id="season-name">Season —</span><small id="season-week"></small></h1>
+    <div class="meta"><span id="updated">Loading…</span><span id="alliance-line"></span></div>
+    <div class="demo" id="demo-banner" hidden>Preview: the roster is real (pulled Oct 22). Daily and season damage are simulated so you can see how the tables fill in once tracking runs.</div>
   </section>
 
+  <div class="show" id="rank-chips" aria-label="Show ranks">
+    <span>Show:</span>
+    <button class="chip" data-rank="R5" aria-pressed="true">R5</button>
+    <button class="chip" data-rank="R4" aria-pressed="true">R4</button>
+    <button class="chip" data-rank="R3" aria-pressed="true">R3</button>
+    <button class="chip" data-rank="R2" aria-pressed="true">R2</button>
+    <button class="chip" data-rank="R1" aria-pressed="true">R1</button>
+  </div>
+
   <nav class="tabs" role="tablist" aria-label="Views">
-    <button role="tab" data-view="roster" id="tab-roster">Roster</button>
+    <button role="tab" data-view="roster" id="tab-roster">Master roster</button>
     <button role="tab" data-view="daily" id="tab-daily">Daily PvP</button>
-    <button role="tab" data-view="season" id="tab-season">Season</button>
-    <button role="tab" data-view="last" id="tab-last">Last season</button>
+    <button role="tab" data-view="season" id="tab-season">Season leaderboard</button>
+    <button role="tab" data-view="last" id="tab-last">Previous season</button>
   </nav>
 
-  <div class="controls">
-    <div class="chips" id="rank-chips" aria-label="Filter by rank">
-      <button class="chip" data-rank="R5" aria-pressed="true">R5</button>
-      <button class="chip" data-rank="R4" aria-pressed="true">R4</button>
-      <button class="chip" data-rank="R3" aria-pressed="true">R3</button>
-      <button class="chip" data-rank="R2" aria-pressed="true">R2</button>
-      <button class="chip" data-rank="R1" aria-pressed="true">R1</button>
-    </div>
-    <label class="search"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"></label>
-  </div>
-  <p class="note" id="view-note"></p>
+  <div class="section-head"><h2 id="sec-title"></h2><span class="refresh" id="sec-refresh"></span></div>
+  <p class="counting" id="sec-counting"></p>
+  <div id="sec-extra"></div>
+  <label class="search"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"></label>
   <div class="table-box"><table id="table"><thead></thead><tbody></tbody></table></div>
 </main>
 
 <footer class="wrap">
-  Data from <a href="https://kg.dbapp.ru/" target="_blank" rel="noopener">KG Companion (kg.dbapp.ru)</a>, checked about every 15 minutes. Daily figures reset at the game's daily reset. Click a player for their history.
+  Data from <a href="https://kg.dbapp.ru/" target="_blank" rel="noopener">KG Companion</a>. Days run 00:00–24:00 UTC. Tap a player's name for their history.
 </footer>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -193,7 +212,7 @@ footer a { color: inherit; }
     set(k, v) { try { localStorage.setItem('kgstats:' + k, JSON.stringify(v)); } catch {} },
   };
 
-  // ---------- number formatting (game-style suffixes) ----------
+  // ---------- formatting ----------
   const SUF = [[1e18, 'Qi'], [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
   const compact = (n, dp = 2) => {
     if (n == null || !isFinite(n)) return '—';
@@ -201,7 +220,7 @@ footer a { color: inherit; }
     for (const [v, s] of SUF) if (a >= v) return (n / v).toFixed(a / v >= 100 ? 1 : dp) + s;
     return Math.round(n).toLocaleString();
   };
-  const powerT = (n) => (n / 1e12).toFixed(n >= 1e14 ? 1 : 2) + 'T';
+  const tNum = (n) => (n / 1e12).toFixed(2);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ago = (iso) => {
     const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
@@ -209,14 +228,16 @@ footer a { color: inherit; }
     const h = Math.round(m / 60); if (h < 48) return h + ' h ago';
     return Math.round(h / 24) + ' days ago';
   };
+  const utcStamp = (iso) => iso.slice(0, 16).replace('T', ' ') + ' UTC';
   const fmtDate = (d) => d ? new Date(d + (d.length === 10 ? 'T00:00:00Z' : '')).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—';
+  const addDays = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 86400e3).toISOString().slice(0, 10);
 
   // ---------- state ----------
   let data = { latest: null, history: null, changes: [], prev: null };
   let view = 'roster';
-  let ranks = new Set(store.get('ranks', RANKS));
+  const ranks = new Set(store.get('ranks', RANKS));
   let query = '';
-  const sorts = store.get('sorts', {});
+  const sorts = store.get('sorts2', {});
 
   const bust = () => '?t=' + Math.floor(Date.now() / 60000);
   const getJson = async (f, d) => { try { const r = await fetch('data/' + f + bust()); if (!r.ok) return d; return await r.json(); } catch { return d; } };
@@ -232,84 +253,89 @@ footer a { color: inherit; }
 
   function renderHeader() {
     const L = data.latest, A = L.alliance, S = L.season;
-    $('#heading').innerHTML = `<span class="tag">[${esc(A.tag)}]</span> ${esc(A.name)}`;
-    $('#subhead').textContent = `KG ${A.server} · Alliance statistics`;
+    $('#brand-tag').textContent = A.tag;
+    $('#brand-sub').textContent = `Stats · KG ${A.server}`;
     document.title = `${A.tag} Alliance Stats`;
-    $('#season-label').textContent = S.week ? `Season ${S.number} · Week ${S.week} · Day ${S.day}` : `Season ${S.number ?? '—'}`;
-    $('#updated').textContent = `Updated ${ago(L.fetchedAt)}`;
+    $('#season-name').textContent = `Season ${S.number ?? '—'}`;
+    $('#season-week').textContent = S.week == null ? '' : (S.week === 0 ? `Rest week · Day ${S.day}` : `Week ${S.week} · Day ${S.day}`);
+    $('#updated').innerHTML = `Last updated: <b>${utcStamp(L.fetchedAt)}</b> (${ago(L.fetchedAt)})`;
+    $('#alliance-line').textContent = `[${A.tag}] ${A.name} · ${A.members}${A.maxMembers ? '/' + A.maxMembers : ''} members · ${compact(A.power)} power`;
     $('#demo-banner').hidden = !L.demo;
-    const m = L.members;
-    $('#s-members').textContent = `${A.members}${A.maxMembers ? '/' + A.maxMembers : ''}`;
-    const cnt = (r) => m.filter((x) => x.rank === r).length;
-    $('#s-members-sub').textContent = RANKS.map((r) => `${r} ${cnt(r)}`).join(' · ');
-    $('#s-power').textContent = compact(A.power);
-    const top10 = [...m].sort((a, b) => b.power - a.power).slice(0, 10).reduce((s, x) => s + x.power, 0);
-    $('#s-power-sub').textContent = `Top 10 hold ${Math.round(top10 / A.power * 100)}%`;
-    const daily = m.reduce((s, x) => s + x.dailyDmg, 0);
-    const fighters = m.filter((x) => x.dailyDmg > 0).length;
-    $('#s-daily').textContent = compact(daily);
-    $('#s-daily-sub').textContent = `${fighters} of ${m.length} members have hit something`;
-    $('#s-season').textContent = compact(m.reduce((s, x) => s + x.seasonDmg, 0));
-    $('#s-season-sub').textContent = S.trackedFrom ? `Since tracking began ${fmtDate(S.trackedFrom)}` : `Season ${S.number}`;
+  }
+
+  // ---------- pieces ----------
+  const rankCell = (r) => `<span class="rank ${esc(r)}">${esc(r || '—')}</span>`;
+  const nameCell = (x) => `<button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>`;
+  const powerCell = (x) => `<span class="pw">${tNum(x.power)}</span>`;
+  const scoreCell = (s, d) => `<b>${compact(s)}</b><span class="dmg">(${compact(d)})</span>`;
+  const seen = (d) => d == null ? '—' : d === 0 ? '<span class="seen-ok">Today</span>' : d < 3 ? `<span class="seen-ok">${d}d ago</span>` : d < 7 ? `<span class="seen-warn">${d}d ago</span>` : `<span class="seen-bad">${d}d ago</span>`;
+  const formulaBox = () => `<div class="formula"><code>Score = PvP Damage ÷ Power<sup>${data.latest.scoreExponent}</sup></code><p>Score estimates how active a player was, allowing for account size. Bigger accounts naturally deal more damage, so damage is divided by power raised to ${data.latest.scoreExponent}. A higher score means a player did more than expected for their size, rewarding effort over raw strength. Damage is shown in brackets.</p></div>`;
+
+  function calendar() {
+    const S = data.latest.season;
+    if (!S.startedOn) return '';
+    const today = data.latest.gameDay, counted = new Set(S.daysCounted || []);
+    const rows = [];
+    for (let w = 0; w * 7 < S.length; w++) {
+      const days = [];
+      for (let i = w * 7; i < Math.min(S.length, w * 7 + 7); i++) {
+        const d = addDays(S.startedOn, i);
+        const cls = d > today ? 'future' : counted.has(d) ? 'on' : '';
+        days.push(`<span class="day ${cls}${d === today ? ' today' : ''}" title="${fmtDate(d)}">${Number(d.slice(8))}</span>`);
+      }
+      const label = w === 0 ? `Rest week (days 1–7)` : `Week ${w} (days ${w * 7 + 1}–${w * 7 + 7})`;
+      rows.push(`<div class="cal-row"><span>${label}</span><div class="days">${days.join('')}</div></div>`);
+    }
+    const n = counted.size, sofar = S.dayNumber || 0;
+    return `<div class="cal"><div class="cal-title">📅 <b>${n} of ${sofar}</b> days counted this season</div>${rows.join('')}
+      <div class="legend"><span><i class="on"></i>Counted</span><span><i></i>Before tracking began</span><span>Gold outline = today</span></div></div>`;
   }
 
   // ---------- views ----------
-  const rankCell = (r) => `<span class="rank ${esc(r)}">${esc(r || '—')}</span>`;
-  const nameCell = (x) => `<span class="flag">${esc(x.flag || '')}</span><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>`;
-  const lastSeen = (d) => d == null ? '—' : d === 0 ? '<span class="pill ok">Today</span>' : d < 3 ? `<span class="pill ok">${d}d ago</span>` : d < 7 ? `<span class="pill warn">${d}d ago</span>` : `<span class="pill bad">${d}d ago</span>`;
-  const scoreCell = (score, dmg, max) => `<span class="score-cell"><b>${compact(score)}</b><span class="sub">${compact(dmg)}</span><span class="meter" aria-hidden="true"><i style="width:${max ? Math.round(score / max * 100) : 0}%"></i></span></span>`;
-  const formula = () => `Score = PvP damage ÷ power<sup>${data.latest.scoreExponent}</sup>. Big accounts naturally hit harder, so the score evens that out and rewards effort for account size. Damage is in grey.`;
-
+  const base = [
+    { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
+    { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
+    { key: 'power', label: 'Power (T)', get: (x) => x.power, cell: powerCell },
+  ];
   const VIEWS = {
     roster: {
-      note: () => `Everyone in the alliance right now, ${data.latest.members.length} members.`,
+      title: () => `Season ${data.latest.season.number} Master Roster`,
+      refresh: 'Refreshes every ~15 minutes',
+      counting: () => `${data.latest.members.length} members in [${esc(data.latest.alliance.tag)}] right now.`,
+      extra: () => '',
       rows: () => data.latest.members,
-      cols: [
-        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
-        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
-        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
-        { key: 'level', label: 'Level', r: 1, get: (x) => x.level ?? 0, cell: (x) => (x.level ?? '—').toLocaleString() },
-        { key: 'pvp', label: 'Lifetime PvP', r: 1, get: (x) => Number(x.pvp), cell: (x) => compact(Number(x.pvp)) },
-        { key: 'seen', label: 'Last online', get: (x) => -(x.daysOffline ?? 999), cell: (x) => lastSeen(x.daysOffline) },
-      ],
-      def: 'power',
+      cols: [...base, { key: 'seen', label: 'Last online', get: (x) => -(x.daysOffline ?? 999), cell: (x) => seen(x.daysOffline) }],
+      def: 'power', medals: false,
     },
     daily: {
-      note: () => `Damage dealt since today's reset. Refreshes about every 15 minutes. ${formula()}`,
+      title: () => 'Daily PvP',
+      refresh: 'Refreshes every ~15 minutes',
+      counting: () => `Counting from ${data.latest.gameDay} 00:00 UTC`,
+      extra: formulaBox,
       rows: () => data.latest.members,
-      cols: [
-        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
-        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
-        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
-        { key: 'score', label: 'Score (damage)', get: (x) => x.dailyScore, cell: (x, max) => scoreCell(x.dailyScore, x.dailyDmg, max), max: (rows) => Math.max(...rows.map((r) => r.dailyScore)) },
-      ],
-      def: 'score',
+      cols: [...base, { key: 'score', label: 'Score (Damage)', get: (x) => x.dailyScore, cell: (x) => scoreCell(x.dailyScore, x.dailyDmg) }],
+      def: 'score', medals: true,
     },
     season: {
-      note: () => {
+      title: () => `Season ${data.latest.season.number} Leaderboard`,
+      refresh: 'Refreshes every ~15 minutes',
+      counting: () => {
         const S = data.latest.season;
-        const from = S.trackedFrom ? ` Tracking began ${fmtDate(S.trackedFrom)}, part-way through this season, so totals count from then.` : '';
-        return `Damage this season so far.${from} ${formula()}`;
+        return `Counting from ${S.countingFrom} 00:00 UTC` + (S.partial ? ` · tracking started part-way through this season` : '');
       },
+      extra: () => formulaBox() + calendar(),
       rows: () => data.latest.members,
-      cols: [
-        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
-        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
-        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
-        { key: 'score', label: 'Total score (damage)', get: (x) => x.seasonScore, cell: (x, max) => scoreCell(x.seasonScore, x.seasonDmg, max), max: (rows) => Math.max(...rows.map((r) => r.seasonScore)) },
-      ],
-      def: 'score',
+      cols: [...base, { key: 'score', label: 'Total Score (Damage)', get: (x) => x.seasonScore, cell: (x) => scoreCell(x.seasonScore, x.seasonDmg) }],
+      def: 'score', medals: true,
     },
     last: {
-      note: () => data.prev ? `Final standings for Season ${data.prev.season} (${fmtDate(data.prev.from)} to ${fmtDate(data.prev.to)}). Frozen when the new season started.` : 'This fills in automatically when the current season ends.',
+      title: () => data.prev ? `Season ${data.prev.season} Final Leaderboard` : 'Previous Season Leaderboard',
+      refresh: 'Updates at season rollover',
+      counting: () => data.prev ? `Counted ${data.prev.from} to ${data.prev.to}` : 'This fills in automatically when the current season ends.',
+      extra: () => data.prev ? formulaBox() : '',
       rows: () => data.prev?.rows || [],
-      cols: [
-        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
-        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
-        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
-        { key: 'score', label: 'Total score (damage)', get: (x) => x.score, cell: (x, max) => scoreCell(x.score, x.dmg, max), max: (rows) => Math.max(...rows.map((r) => r.score)) },
-      ],
-      def: 'score',
+      cols: [...base, { key: 'score', label: 'Total Score (Damage)', get: (x) => x.score, cell: (x) => scoreCell(x.score, x.dmg) }],
+      def: 'score', medals: true,
     },
   };
 
@@ -317,26 +343,28 @@ footer a { color: inherit; }
     if (!data.latest) return;
     const V = VIEWS[view];
     document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
-    $('#view-note').innerHTML = V.note();
+    $('#sec-title').textContent = V.title();
+    $('#sec-refresh').textContent = V.refresh;
+    $('#sec-counting').innerHTML = V.counting();
+    $('#sec-extra').innerHTML = V.extra();
     const sort = sorts[view] || { key: V.def, dir: -1 };
     const col = V.cols.find((c) => c.key === sort.key) || V.cols[0];
     let rows = V.rows().filter((x) => !x.rank || ranks.has(x.rank));
     if (query) rows = rows.filter((x) => x.name.toLowerCase().includes(query));
     rows = [...rows].sort((a, b) => { const A = col.get(a), B = col.get(b); return (A > B ? 1 : A < B ? -1 : 0) * sort.dir; });
-    const scoreCol = V.cols.find((c) => c.max);
-    const max = scoreCol ? scoreCol.max(V.rows()) : 0;
-    const thead = '<tr><th class="r">#</th>' + V.cols.map((c) => {
+    $('#table thead').innerHTML = '<tr><th>#</th>' + V.cols.map((c) => {
       const s = c.key === col.key ? (sort.dir < 0 ? 'descending' : 'ascending') : 'none';
-      return `<th class="${c.r ? 'r' : ''}" aria-sort="${s}">${c.label ? `<button data-sort="${c.key}">${c.label}</button>` : ''}</th>`;
+      return `<th aria-sort="${s}"><button data-sort="${c.key}">${c.label}</button></th>`;
     }).join('') + '</tr>';
-    $('#table thead').innerHTML = thead;
-    const ranked = col.key === 'score' && sort.dir < 0;
-    $('#table tbody').innerHTML = rows.length ? rows.map((x, i) =>
-      `<tr class="${ranked && i < 3 ? 'top' : ''}"><td class="pos r">${i + 1}</td>` + V.cols.map((c) => `<td class="${c.r ? 'r' : ''}">${c.cell(x, max)}</td>`).join('') + '</tr>'
-    ).join('') : `<tr><td class="empty" colspan="${V.cols.length + 1}">${view === 'last' ? 'No finished season yet.' : 'No players match.'}</td></tr>`;
+    const podium = V.medals && col.key === 'score' && sort.dir < 0 && !query;
+    const MED = ['🥇', '🥈', '🥉'], CLS = ['gold', 'silver', 'bronze'];
+    $('#table tbody').innerHTML = rows.length ? rows.map((x, i) => {
+      const top = podium && i < 3 && col.get(x) > 0;
+      return `<tr class="${top ? CLS[i] : ''}"><td class="pos">${top ? `<span class="medal">${MED[i]}</span>` : ''}${i + 1}</td>` + V.cols.map((c) => `<td>${c.cell(x)}</td>`).join('') + '</tr>';
+    }).join('') : `<tr><td class="empty" colspan="${V.cols.length + 1}">${view === 'last' ? 'No finished season yet.' : 'No players match.'}</td></tr>`;
   }
 
-  // ---------- player drawer ----------
+  // ---------- player panel ----------
   function chart(values, dates, kind, fmt) {
     const W = 420, H = 150, P = { l: 8, r: 54, t: 10, b: 22 };
     const pts = values.map((v, i) => ({ v, i })).filter((p) => p.v != null);
@@ -352,12 +380,12 @@ footer a { color: inherit; }
     let marks;
     if (kind === 'bar') {
       const bw = Math.max(2, iw / n * 0.7);
-      marks = pts.map((p) => `<rect x="${x(p.i) - bw / 2}" y="${y(p.v)}" width="${bw}" height="${Math.max(0, y(lo) - y(p.v))}" rx="1.5" fill="var(--bar)"/>`).join('');
+      marks = pts.map((p) => `<rect x="${x(p.i) - bw / 2}" y="${y(p.v)}" width="${bw}" height="${Math.max(0, y(lo) - y(p.v))}" rx="1.5" fill="var(--violet-strong)"/>`).join('');
     } else {
       const d = pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
       const area = `${d}L${x(pts.at(-1).i).toFixed(1)},${y(lo)}L${x(pts[0].i).toFixed(1)},${y(lo)}Z`;
       const last = pts.at(-1);
-      marks = `<path d="${area}" fill="var(--gold)" fill-opacity=".12"/><path d="${d}" fill="none" stroke="var(--gold)" stroke-width="2"/><circle cx="${x(last.i)}" cy="${y(last.v)}" r="3.5" fill="var(--gold)"/>`;
+      marks = `<path d="${area}" fill="var(--cyan)" fill-opacity=".12"/><path d="${d}" fill="none" stroke="var(--cyan)" stroke-width="2"/><circle cx="${x(last.i)}" cy="${y(last.v)}" r="3.5" fill="var(--cyan)"/>`;
     }
     return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">${grid}${marks}${labels}</svg></div>`;
   }
@@ -367,12 +395,12 @@ footer a { color: inherit; }
     const m = L.members.find((x) => String(x.id) === String(id));
     const h = data.history?.players?.[id];
     const days = data.history?.days || [];
-    const name = m?.name || h?.n || data.changes.find((c) => String(c.id) === String(id))?.name || 'Player';
-    const kv = (label, val) => `<div><label>${label}</label><span class="num">${val}</span></div>`;
-    let html = `<button class="x" id="close" aria-label="Close">×</button><h2 id="p-name">${esc(m?.flag || '')} ${esc(name)}</h2>`;
+    const name = m?.name || h?.n || data.prev?.rows?.find((r) => String(r.id) === String(id))?.name || 'Player';
+    const kv = (label, val, sub) => `<div><label>${label}</label><span class="num">${val}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+    let html = `<button class="x" id="close" aria-label="Close">×</button><h2 id="p-name">${esc(name)}</h2>`;
     if (m) {
-      html += `<p class="note" style="margin-top:6px">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()} · in the alliance since ${fmtDate(m.firstSeen)}${m.firstSeen === L.trackingSince.slice(0, 10) ? ' (or earlier)' : ''}</p>`;
-      html += `<div class="kv">${kv('Power', powerT(m.power))}${kv('Peak power', powerT(m.maxPower))}${kv('Today', compact(m.dailyDmg) + '<span class="sub">score ' + compact(m.dailyScore) + '</span>')}${kv('This season', compact(m.seasonDmg) + '<span class="sub">score ' + compact(m.seasonScore) + '</span>')}${kv('Lifetime PvP', compact(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
+      html += `<p class="sub">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()}</p>`;
+      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', compact(m.dailyDmg), 'Score ' + compact(m.dailyScore))}${kv('This season', compact(m.seasonDmg), 'Score ' + compact(m.seasonScore))}${kv('Lifetime PvP', compact(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
     } else {
       html += '<p class="note">No longer in the alliance.</p>';
     }
@@ -380,12 +408,12 @@ footer a { color: inherit; }
       const N = Math.min(days.length, 60), s = days.length - N;
       const pDays = days.slice(s), pPow = h.p.slice(s), pDmg = h.d.slice(s);
       if (m) { pDays.push(L.gameDay); pPow.push(m.power); }
-      html += `<div class="chart-title">Power</div>${chart(pPow, pDays, 'line', powerT)}`;
+      html += `<div class="chart-title">Power (T)</div>${chart(pPow, pDays, 'line', (v) => tNum(v))}`;
       html += `<div class="chart-title">PvP damage per day</div>${chart(pDmg, days.slice(s), 'bar', (v) => compact(v, 1))}`;
     } else {
       html += '<p class="note">Daily history starts after the first full day of tracking.</p>';
     }
-    if (m) html += `<p class="note" style="margin-top:18px"><a href="https://kg.dbapp.ru/character/${m.id}" target="_blank" rel="noopener" style="color:inherit">Open on KG Companion</a></p>`;
+    if (m) html += `<p class="note" style="margin-top:18px"><a href="https://kg.dbapp.ru/character/${m.id}" target="_blank" rel="noopener">Open on KG Companion</a></p>`;
     const dr = $('#drawer'); dr.innerHTML = html; dr.hidden = false; $('#scrim').hidden = false;
     $('#close').focus();
   }
@@ -394,13 +422,13 @@ footer a { color: inherit; }
   // ---------- events ----------
   const setView = (v) => { if (!VIEWS[v]) v = 'roster'; view = v; try { history.replaceState(null, '', '#' + v); } catch {} render(); };
   document.querySelector('.tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-view]'); if (b) setView(b.dataset.view); });
+  const syncChips = () => document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', ranks.has(c.dataset.rank)));
   $('#rank-chips').addEventListener('click', (e) => {
     const b = e.target.closest('.chip'); if (!b) return;
     const r = b.dataset.rank; ranks.has(r) ? ranks.delete(r) : ranks.add(r);
     if (!ranks.size) RANKS.forEach((x) => ranks.add(x));
     syncChips(); store.set('ranks', [...ranks]); render();
   });
-  const syncChips = () => document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', ranks.has(c.dataset.rank)));
   $('#q').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
   $('#table').addEventListener('click', (e) => {
     const s = e.target.closest('button[data-sort]');
@@ -408,7 +436,7 @@ footer a { color: inherit; }
       const V = VIEWS[view], cur = sorts[view] || { key: V.def, dir: -1 };
       const c = V.cols.find((x) => x.key === s.dataset.sort);
       sorts[view] = cur.key === c.key ? { key: c.key, dir: -cur.dir } : { key: c.key, dir: c.asc ? 1 : -1 };
-      store.set('sorts', sorts); render(); return;
+      store.set('sorts2', sorts); render(); return;
     }
     const n = e.target.closest('.name-btn'); if (n) openPlayer(n.dataset.id);
   });
@@ -416,10 +444,22 @@ footer a { color: inherit; }
   $('#scrim').addEventListener('click', closePlayer);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePlayer(); });
 
+  // Old links (#inactive, #changes) fall back to the roster.
   syncChips();
   setView((location.hash || '').slice(1) || 'roster');
   load();
   setInterval(load, 5 * 60 * 1000);
+})();
+
+// Google Translate language picker. If it can't load, the page works without it.
+window.googleTranslateElementInit = function () {
+  try { new google.translate.TranslateElement({ pageLanguage: 'en', autoDisplay: false }, 'google_translate_element'); } catch (e) {}
+};
+(function () {
+  const s = document.createElement('script');
+  s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+  s.async = true;
+  document.head.appendChild(s);
 })();
 </script>
 <!--ARTIFACT-BODY-END-->
