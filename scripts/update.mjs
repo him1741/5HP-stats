@@ -101,6 +101,28 @@ const prevLatest = await readJson('latest.json', null);
 const history = await readJson('history.json', { days: [], players: {} });
 let changes = await readJson('changes.json', []);
 
+// Per-day damage straight from KG Companion's Activity feed, so daily figures
+// match it exactly however late a scheduled run starts. dayDamage.get(date).get(id)
+// = that day's damage (several records on one day are added up; the season-start
+// drop shows as a negative and counts as 0). Falls back to snapshots if unavailable.
+let dayDamage = null;
+try {
+  const text = await fetchText(`https://kg.dbapp.ru/api/alliance/${config.allianceId}/activity`);
+  const act = JSON.parse(text.replace(/"(pvpDamage|diffDamage|maxPower)":(-?\d+)/g, '"$1":"$2"'));
+  if (Array.isArray(act?.activities)) {
+    dayDamage = new Map();
+    for (const a of act.activities) {
+      const d = big(a.diffDamage); if (d <= 0n) continue;
+      if (!dayDamage.has(a.date)) dayDamage.set(a.date, new Map());
+      const m = dayDamage.get(a.date), id = String(a.characterID);
+      m.set(id, (m.get(id) || 0n) + d);
+    }
+  }
+} catch (e) {
+  console.warn(`Activity feed unavailable (${e.message}); daily figures use snapshots this run.`);
+}
+const dayDmgFor = (date, id) => dayDamage ? (dayDamage.get(date)?.get(String(id)) ?? 0n) : null;
+
 // Guard against a half-loaded response wiping the roster.
 if (state && Object.keys(state.dayBaseline).length >= 20 && members.length < Object.keys(state.dayBaseline).length * 0.5) {
   console.warn(`Member count fell from ${Object.keys(state.dayBaseline).length} to ${members.length} in one run — looks like a bad response, skipping.`);
@@ -187,7 +209,8 @@ if (!firstRun && today !== st.day) {
   const n = history.days.length;
   for (const [id, m] of byId) {
     const base = st.dayBaseline[id];
-    const dmg = base ? Number(nonNeg(big(m.pvpDamage) - big(base.pvp))) : null;
+    const fromFeed = dayDmgFor(closing, id);
+    const dmg = fromFeed != null ? Number(fromFeed) : base ? Number(nonNeg(big(m.pvpDamage) - big(base.pvp))) : null;
     const h = (history.players[id] ??= { n: m.nickname, p: [], d: [] });
     h.n = m.nickname;
     while (h.p.length < n - 1) { h.p.push(null); h.d.push(null); }
@@ -262,7 +285,8 @@ const rows = members.map((m) => {
   const maxPower = Math.max(Number(m.maxPower) || 0, power);
   const dBase = st.dayBaseline[id];
   const sBase = st.seasonBaseline[id];
-  const daily = dBase ? nonNeg(big(m.pvpDamage) - big(dBase.pvp)) : 0n;
+  const fromFeed = dayDmgFor(today, id);
+  const daily = fromFeed != null ? fromFeed : dBase ? nonNeg(big(m.pvpDamage) - big(dBase.pvp)) : 0n;
   const seasonDmg = sBase ? nonNeg(big(m.pvpDamage) - big(sBase.pvp)) : 0n;
   return {
     id: m.id,
