@@ -54,7 +54,7 @@ From here it updates itself every 15 minutes. Nothing else to do.
 - **Roster, power, last online:** filled immediately.
 - **Daily PvP:** counts from the first run. The first "full" day is the one after the next daily reset.
 - **Season leaderboard:** counts from the day you started tracking, and says so on the page. From next season on it covers the whole season.
-- **Last season:** fills in automatically the moment the season number changes.
+- **Previous season:** fills in automatically when the new season starts (00:00 UTC on its first day).
 - **Player history charts:** one point per day, so they become useful after a few days.
 
 The score is the same idea RISE uses: **PvP damage ÷ power^0.6**. Big accounts hit harder anyway, so this rewards effort for an account's size.
@@ -69,7 +69,8 @@ Open `config.json` in the repository, click the pencil icon, edit, and **Commit 
 |---|---|
 | `allianceId` | The ID from the end of the KG Companion alliance link. Change it to track a different alliance. |
 | `resetHourUTC` | The hour (in UTC) of the in-game daily reset, so "today" starts at the right time. Default `0` (midnight UTC). |
-| `seasonStartDate` | Optional, like `"2026-10-05"`. Lets the header show "Week X · Day Y" straight away. Leave as `null` and it works it out from the next season change. |
+| `seasonAnchorDate` | Any date a season started on (seasons start on the same day for every server). Default `"2026-09-28"`. The site counts forward from it to know the current season, week and day. |
+| `seasonLengthDays` | Days per season, including the rest week. Default `28`. |
 | `scoreExponent` | The `0.6` in the score formula. |
 | `historyDays` | How many days of history to keep for the charts. Default `180`. |
 

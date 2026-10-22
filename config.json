@@ -3,7 +3,8 @@
   "siteTitle": "5HP STATS",
   "siteSubtitle": "FiveHitPoint · KG 1737",
   "resetHourUTC": 0,
-  "seasonStartDate": null,
+  "seasonAnchorDate": "2026-09-28",
+  "seasonLengthDays": 28,
   "scoreExponent": 0.6,
   "inactiveDays": 3,
   "historyDays": 180
