@@ -25,7 +25,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, 'data');
 const config = JSON.parse(await readFile(path.join(ROOT, 'config.json'), 'utf8'));
 const now = process.env.NOW ? new Date(process.env.NOW) : new Date();
-const EXP = config.scoreExponent ?? 0.6;
 const MAX_CHANGES = 400;
 
 // ---------- helpers ----------
@@ -41,7 +40,8 @@ const gameDay = (d) => new Date(d.getTime() - (config.resetHourUTC || 0) * 3600e
 const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400e3);
 const big = (v) => { try { return BigInt(String(v ?? '0')); } catch { return 0n; } };
 const nonNeg = (x) => (x < 0n ? 0n : x);
-const score = (dmg, power) => (power > 0 ? Number(dmg) / Math.pow(power, EXP) : 0);
+// Activity score, as KG Companion and the game work it out: PvP damage ÷ max power.
+const score = (dmg, maxPower) => (maxPower > 0 ? Number(dmg) / maxPower : 0);
 const round = (x, n = 2) => Math.round(x * 10 ** n) / 10 ** n;
 
 async function fetchText(url) {
@@ -157,11 +157,12 @@ if (!firstRun && (dateRoll || numberRoll)) {
     const pvpNow = m ? m.pvpDamage : prevRow?.pvp;
     if (pvpNow == null) continue;
     const power = m ? Number(m.power) : prevRow?.power ?? 0;
+    const maxP = m ? Math.max(Number(m.maxPower) || 0, power) : prevRow?.maxPower ?? power;
     const dmg = nonNeg(big(pvpNow) - big(base.pvp));
     rows.push({
       id: Number(id), name: m?.nickname ?? prevRow?.name ?? st.known[id]?.name ?? id,
       rank: m?.allianceRankName ?? prevRow?.rank ?? '', power,
-      dmg: Number(dmg), score: round(score(dmg, power)),
+      dmg: Number(dmg), score: round(score(dmg, maxP)),
       partial: base.since !== st.seasonStartedOn,
     });
   }
@@ -258,6 +259,7 @@ if (!st.backfilled && config.importHistory !== false) {
 const rows = members.map((m) => {
   const id = String(m.id);
   const power = Number(m.power) || 0;
+  const maxPower = Math.max(Number(m.maxPower) || 0, power);
   const dBase = st.dayBaseline[id];
   const sBase = st.seasonBaseline[id];
   const daily = dBase ? nonNeg(big(m.pvpDamage) - big(dBase.pvp)) : 0n;
@@ -269,16 +271,16 @@ const rows = members.map((m) => {
     flag: m.flag?.content || '',
     level: m.level ?? null,
     power,
-    maxPower: Math.max(Number(m.maxPower) || 0, power),
+    maxPower,
     pvp: String(m.pvpDamage ?? '0'),
     pvpRate: m.pvpRate ?? null,
     lastOnline: m.lastOnline || null,
     daysOffline: m.lastOnlineDays ?? null,
     deleted: !!m.deleted,
     dailyDmg: Number(daily),
-    dailyScore: round(score(daily, power)),
+    dailyScore: round(score(daily, maxPower)),
     seasonDmg: Number(seasonDmg),
-    seasonScore: round(score(seasonDmg, power)),
+    seasonScore: round(score(seasonDmg, maxPower)),
     seasonPartial: !!(sBase && st.seasonStartedOn && sBase.since !== st.seasonStartedOn) || !st.seasonStartedOn,
     firstSeen: st.known[id]?.firstSeen ?? today,
   };
@@ -308,7 +310,7 @@ const latest = {
     power: Number(alliance.power) || 0, members: members.length, maxMembers: alliance.maxMembers ?? null,
     techLevel: alliance.techLevel ?? null, kvkWins: alliance.kvkWins ?? null,
   },
-  scoreExponent: EXP,
+  scoreFormula: 'damage / maxPower',
   inactiveDays: config.inactiveDays ?? 3,
   members: rows,
 };

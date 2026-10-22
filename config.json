@@ -5,7 +5,6 @@
   "resetHourUTC": 0,
   "seasonAnchorDate": "2026-09-28",
   "seasonLengthDays": 28,
-  "scoreExponent": 0.6,
   "inactiveDays": 3,
   "historyDays": 180
 }

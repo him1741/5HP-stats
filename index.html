@@ -268,9 +268,10 @@ footer a { color: var(--ink-2); }
   const rankCell = (r) => `<span class="rank ${esc(r)}">${esc(r || '—')}</span>`;
   const nameCell = (x) => `<button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>`;
   const powerCell = (x) => `<span class="pw">${tNum(x.power)}</span>`;
-  const scoreCell = (s, d) => `<b>${compact(s)}</b><span class="dmg">(${compact(d)})</span>`;
+  const fmtScore = (s) => (s ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const scoreCell = (s, d) => `<b>${fmtScore(s)}</b><span class="dmg">(${compact(d)})</span>`;
   const seen = (d) => d == null ? '—' : d === 0 ? '<span class="seen-ok">Today</span>' : d < 3 ? `<span class="seen-ok">${d}d ago</span>` : d < 7 ? `<span class="seen-warn">${d}d ago</span>` : `<span class="seen-bad">${d}d ago</span>`;
-  const formulaBox = () => `<div class="formula"><code>Score = PvP Damage ÷ Power<sup>${data.latest.scoreExponent}</sup></code><p>Score estimates how active a player was, allowing for account size. Bigger accounts naturally deal more damage, so damage is divided by power raised to ${data.latest.scoreExponent}. A higher score means a player did more than expected for their size, rewarding effort over raw strength. Damage is shown in brackets.</p></div>`;
+  const formulaBox = () => `<div class="formula"><code>Activity = PvP Damage ÷ Max Power</code><p>The same activity score the game and KG Companion use. Dividing by a player's highest power lets big and small accounts be compared fairly: a higher score means more fighting for their size. Damage is shown in brackets.</p></div>`;
 
   function calendar() {
     const S = data.latest.season;
@@ -314,7 +315,7 @@ footer a { color: var(--ink-2); }
       counting: () => `Counting from ${data.latest.gameDay} 00:00 UTC`,
       extra: formulaBox,
       rows: () => data.latest.members,
-      cols: [...base, { key: 'score', label: 'Score (Damage)', get: (x) => x.dailyScore, cell: (x) => scoreCell(x.dailyScore, x.dailyDmg) }],
+      cols: [...base, { key: 'score', label: 'Activity (Damage)', get: (x) => x.dailyScore, cell: (x) => scoreCell(x.dailyScore, x.dailyDmg) }],
       def: 'score', medals: true,
     },
     season: {
@@ -326,7 +327,7 @@ footer a { color: var(--ink-2); }
       },
       extra: () => formulaBox() + calendar(),
       rows: () => data.latest.members,
-      cols: [...base, { key: 'score', label: 'Total Score (Damage)', get: (x) => x.seasonScore, cell: (x) => scoreCell(x.seasonScore, x.seasonDmg) }],
+      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.seasonScore, cell: (x) => scoreCell(x.seasonScore, x.seasonDmg) }],
       def: 'score', medals: true,
     },
     last: {
@@ -335,7 +336,7 @@ footer a { color: var(--ink-2); }
       counting: () => data.prev ? `Counted ${data.prev.from} to ${data.prev.to}` : 'This fills in automatically when the current season ends.',
       extra: () => data.prev ? formulaBox() : '',
       rows: () => data.prev?.rows || [],
-      cols: [...base, { key: 'score', label: 'Total Score (Damage)', get: (x) => x.score, cell: (x) => scoreCell(x.score, x.dmg) }],
+      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.score, cell: (x) => scoreCell(x.score, x.dmg) }],
       def: 'score', medals: true,
     },
   };
@@ -401,7 +402,7 @@ footer a { color: var(--ink-2); }
     let html = `<button class="x" id="close" aria-label="Close">×</button><h2 id="p-name">${esc(name)}</h2>`;
     if (m) {
       html += `<p class="sub">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()}</p>`;
-      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', compact(m.dailyDmg), 'Score ' + compact(m.dailyScore))}${kv('This season', compact(m.seasonDmg), 'Score ' + compact(m.seasonScore))}${kv('PvP total (KG Companion)', compact(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
+      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', compact(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore))}${kv('This season', compact(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore))}${kv('PvP total (KG Companion)', compact(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
     } else {
       html += '<p class="note">No longer in the alliance.</p>';
     }
