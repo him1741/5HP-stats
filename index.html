@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--ARTIFACT-START-->
+<title>5HP Alliance Stats</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: alliance banner → summary strip → tab bar with filters → one sortable ledger table; player drawer slides from the right. */
+:root {
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --ink: #17202d;
+  --muted: #5b6678;
+  --line: #d6dce6;
+  --band: #1d2a3d;
+  --band-ink: #f2f4f8;
+  --gold: #9a6a08;
+  --gold-soft: #f6ead0;
+  --r5: #9a6a08; --r4: #7044a8; --r3: #2a6bb0; --r2: #2f8a6a; --r1: #6d7686;
+  --good: #23824f; --warn: #b26b00; --bad: #b3332f;
+  --bar: #2a6bb0;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161f; --surface: #172030; --ink: #e7ebf2; --muted: #95a1b4; --line: #27334a;
+    --band: #0b1018; --band-ink: #f2f4f8; --gold: #e2b44f; --gold-soft: #33290f;
+    --r5: #e2b44f; --r4: #b28ae6; --r3: #6aa8ea; --r2: #5cc39b; --r1: #9aa4b5;
+    --good: #4cc282; --warn: #e3a23a; --bad: #ef6b66; --bar: #6aa8ea;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161f; --surface: #172030; --ink: #e7ebf2; --muted: #95a1b4; --line: #27334a;
+  --band: #0b1018; --band-ink: #f2f4f8; --gold: #e2b44f; --gold-soft: #33290f;
+  --r5: #e2b44f; --r4: #b28ae6; --r3: #6aa8ea; --r2: #5cc39b; --r1: #9aa4b5;
+  --good: #4cc282; --warn: #e3a23a; --bad: #ef6b66; --bar: #6aa8ea;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Banner */
+.banner { background: var(--band); color: var(--band-ink); }
+.banner .wrap { padding-block: 22px 18px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; justify-content: space-between; }
+.title h1 { margin: 0; font: 700 clamp(30px, 6vw, 44px)/1 var(--font-display); letter-spacing: .02em; text-wrap: balance; }
+.title h1 .tag { color: var(--gold); }
+.title p { margin: 6px 0 0; color: color-mix(in srgb, var(--band-ink) 72%, transparent); font-size: 14px; }
+.season { text-align: right; min-width: 0; }
+.season b { display: block; font: 600 20px/1.1 var(--font-display); letter-spacing: .04em; text-transform: uppercase; color: var(--gold); }
+.season span { font-size: 13px; color: color-mix(in srgb, var(--band-ink) 72%, transparent); }
+.demo { background: var(--gold-soft); color: var(--ink); font-size: 14px; }
+.demo .wrap { padding-block: 9px; }
+
+/* Summary strip */
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 18px; }
+.stat { background: var(--surface); padding: 12px 14px; min-width: 0; }
+.stat label { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.stat strong { font: 600 26px/1.15 var(--font-display); }
+.stat small { display: block; color: var(--muted); font-size: 12.5px; }
+@media (max-width: 640px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .season { text-align: left; } }
+
+/* Tabs + controls */
+.tabs { display: flex; gap: 4px; overflow-x: auto; margin-top: 22px; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.tabs button { flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 9px 12px 8px; font: 600 17px/1 var(--font-display); letter-spacing: .03em; color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--gold); }
+.tabs button:focus-visible, .chip:focus-visible, th button:focus-visible, .name-btn:focus-visible, .x:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding-block: 14px 10px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 4px 11px; font: 600 13px/1.2 var(--font-body); cursor: pointer; }
+.chip[aria-pressed="true"] { color: var(--ink); border-color: currentColor; }
+.chip[aria-pressed="true"][data-rank="R5"] { color: var(--r5); } .chip[aria-pressed="true"][data-rank="R4"] { color: var(--r4); }
+.chip[aria-pressed="true"][data-rank="R3"] { color: var(--r3); } .chip[aria-pressed="true"][data-rank="R2"] { color: var(--r2); }
+.chip[aria-pressed="true"][data-rank="R1"] { color: var(--r1); }
+.search { flex: 1 1 200px; max-width: 280px; }
+.search input { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 10px; font: inherit; }
+.note { color: var(--muted); font-size: 13.5px; margin: 0 0 10px; max-width: 70ch; }
+.note code { font-size: 12.5px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+
+/* Table */
+.table-box { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 12px; text-align: left; white-space: nowrap; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); }
+th button { all: unset; cursor: pointer; }
+th button::after { content: ""; margin-left: 4px; }
+th[aria-sort="descending"] button::after { content: "▼"; font-size: 9px; }
+th[aria-sort="ascending"] button::after { content: "▲"; font-size: 9px; }
+th.r, td.r { text-align: right; }
+tbody tr { border-top: 1px solid var(--line); }
+tbody tr:first-child { border-top: 0; }
+tbody tr:hover { background: color-mix(in srgb, var(--gold) 6%, transparent); }
+td.pos { color: var(--muted); width: 1%; }
+.top td.pos { color: var(--gold); font-weight: 600; }
+.rank { display: inline-block; min-width: 30px; text-align: center; font: 600 12px/1.6 var(--font-body); border-radius: 5px; padding: 0 5px; border: 1px solid currentColor; }
+.rank.R5 { color: var(--r5); } .rank.R4 { color: var(--r4); } .rank.R3 { color: var(--r3); } .rank.R2 { color: var(--r2); } .rank.R1 { color: var(--r1); }
+.name-btn { all: unset; cursor: pointer; font-weight: 600; }
+.name-btn:hover { text-decoration: underline; }
+.flag { margin-right: 6px; }
+.sub { color: var(--muted); font-size: 12.5px; margin-left: 6px; }
+.score-cell b { font-weight: 600; }
+.meter { display: inline-block; vertical-align: middle; width: 70px; height: 6px; border-radius: 3px; background: var(--line); margin-left: 10px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--bar); }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 8px; }
+.pill.ok { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
+.pill.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.pill.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+footer { color: var(--muted); font-size: 13px; padding-block: 22px 32px; }
+footer a { color: inherit; }
+
+/* Player drawer */
+.scrim { position: fixed; inset: 0; background: rgb(8 12 18 / .45); z-index: 20; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); background: var(--surface); border-left: 1px solid var(--line); z-index: 21; overflow-y: auto;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 18px; }
+.drawer h2 { margin: 0; font: 700 30px/1.05 var(--font-display); overflow-wrap: anywhere; }
+.drawer .x { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; width: 34px; height: 34px; font-size: 18px; cursor: pointer; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 16px 0 6px; }
+.kv div { min-width: 0; }
+.kv label { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.kv span { font: 600 19px/1.2 var(--font-display); }
+.chart-title { font: 600 15px/1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 20px 0 6px; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font: 11px var(--font-body); }
+@media (prefers-reduced-motion: no-preference) { .drawer { animation: slide .18s ease-out; } @keyframes slide { from { transform: translateX(24px); opacity: .6; } } }
+</style>
+<!--ARTIFACT-HEAD-END-->
+</head>
+<body>
+<!--ARTIFACT-BODY-START-->
+<header class="banner">
+  <div class="wrap">
+    <div class="title">
+      <h1 id="heading"><span class="tag">[5HP]</span> FiveHitPoint</h1>
+      <p id="subhead">KG 1737 · Alliance statistics</p>
+    </div>
+    <div class="season"><b id="season-label">Season —</b><span id="updated">Loading…</span></div>
+  </div>
+</header>
+<div class="demo" id="demo-banner" hidden><div class="wrap">Preview: the roster is real (pulled Oct 22). Daily and season damage are simulated so you can see how the tables fill in once tracking runs.</div></div>
+
+<main class="wrap">
+  <section class="summary" aria-label="Alliance summary">
+    <div class="stat"><label>Members</label><strong class="num" id="s-members">—</strong><small id="s-members-sub"></small></div>
+    <div class="stat"><label>Alliance power</label><strong class="num" id="s-power">—</strong><small id="s-power-sub"></small></div>
+    <div class="stat"><label>PvP damage today</label><strong class="num" id="s-daily">—</strong><small id="s-daily-sub"></small></div>
+    <div class="stat"><label>Inactive</label><strong class="num" id="s-inactive">—</strong><small id="s-inactive-sub"></small></div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button role="tab" data-view="roster" id="tab-roster">Roster</button>
+    <button role="tab" data-view="daily" id="tab-daily">Daily PvP</button>
+    <button role="tab" data-view="season" id="tab-season">Season</button>
+    <button role="tab" data-view="last" id="tab-last">Last season</button>
+    <button role="tab" data-view="inactive" id="tab-inactive">Inactive</button>
+    <button role="tab" data-view="changes" id="tab-changes">Joins &amp; leaves</button>
+  </nav>
+
+  <div class="controls">
+    <div class="chips" id="rank-chips" aria-label="Filter by rank">
+      <button class="chip" data-rank="R5" aria-pressed="true">R5</button>
+      <button class="chip" data-rank="R4" aria-pressed="true">R4</button>
+      <button class="chip" data-rank="R3" aria-pressed="true">R3</button>
+      <button class="chip" data-rank="R2" aria-pressed="true">R2</button>
+      <button class="chip" data-rank="R1" aria-pressed="true">R1</button>
+    </div>
+    <label class="search"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"></label>
+  </div>
+  <p class="note" id="view-note"></p>
+  <div class="table-box"><table id="table"><thead></thead><tbody></tbody></table></div>
+</main>
+
+<footer class="wrap">
+  Data from <a href="https://kg.dbapp.ru/" target="_blank" rel="noopener">KG Companion (kg.dbapp.ru)</a>, checked about every 15 minutes. Daily figures reset at the game's daily reset. Click a player for their history.
+</footer>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-modal="true" role="dialog" aria-labelledby="p-name"></aside>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const RANKS = ['R5', 'R4', 'R3', 'R2', 'R1'];
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('kgstats:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('kgstats:' + k, JSON.stringify(v)); } catch {} },
+  };
+
+  // ---------- number formatting (game-style suffixes) ----------
+  const SUF = [[1e18, 'Qi'], [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+  const compact = (n, dp = 2) => {
+    if (n == null || !isFinite(n)) return '—';
+    const a = Math.abs(n);
+    for (const [v, s] of SUF) if (a >= v) return (n / v).toFixed(a / v >= 100 ? 1 : dp) + s;
+    return Math.round(n).toLocaleString();
+  };
+  const powerT = (n) => (n / 1e12).toFixed(n >= 1e14 ? 1 : 2) + 'T';
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ago = (iso) => {
+    const m = Math.round((Date.now() - Date.parse(iso)) / 60000);
+    if (m < 1) return 'just now'; if (m < 60) return m + ' min ago';
+    const h = Math.round(m / 60); if (h < 48) return h + ' h ago';
+    return Math.round(h / 24) + ' days ago';
+  };
+  const fmtDate = (d) => d ? new Date(d + (d.length === 10 ? 'T00:00:00Z' : '')).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—';
+
+  // ---------- state ----------
+  let data = { latest: null, history: null, changes: [], prev: null };
+  let view = 'roster';
+  let ranks = new Set(store.get('ranks', RANKS));
+  let query = '';
+  const sorts = store.get('sorts', {});
+
+  const bust = () => '?t=' + Math.floor(Date.now() / 60000);
+  const getJson = async (f, d) => { try { const r = await fetch('data/' + f + bust()); if (!r.ok) return d; return await r.json(); } catch { return d; } };
+
+  async function load() {
+    const [latest, history, changes, prev] = await Promise.all([
+      getJson('latest.json', null), getJson('history.json', null), getJson('changes.json', []), getJson('prev-season.json', null),
+    ]);
+    if (!latest) { $('#updated').textContent = 'No data yet. The first update runs within 15 minutes of setup.'; return; }
+    data = { latest, history, changes: changes || [], prev };
+    renderHeader(); render();
+  }
+
+  function renderHeader() {
+    const L = data.latest, A = L.alliance, S = L.season;
+    $('#heading').innerHTML = `<span class="tag">[${esc(A.tag)}]</span> ${esc(A.name)}`;
+    $('#subhead').textContent = `KG ${A.server} · Alliance statistics`;
+    document.title = `${A.tag} Alliance Stats`;
+    $('#season-label').textContent = S.week ? `Season ${S.number} · Week ${S.week} · Day ${S.day}` : `Season ${S.number ?? '—'}`;
+    $('#updated').textContent = `Updated ${ago(L.fetchedAt)}`;
+    $('#demo-banner').hidden = !L.demo;
+    const m = L.members;
+    $('#s-members').textContent = `${A.members}${A.maxMembers ? '/' + A.maxMembers : ''}`;
+    const cnt = (r) => m.filter((x) => x.rank === r).length;
+    $('#s-members-sub').textContent = RANKS.map((r) => `${r} ${cnt(r)}`).join(' · ');
+    $('#s-power').textContent = compact(A.power);
+    const top10 = [...m].sort((a, b) => b.power - a.power).slice(0, 10).reduce((s, x) => s + x.power, 0);
+    $('#s-power-sub').textContent = `Top 10 hold ${Math.round(top10 / A.power * 100)}%`;
+    const daily = m.reduce((s, x) => s + x.dailyDmg, 0);
+    const fighters = m.filter((x) => x.dailyDmg > 0).length;
+    $('#s-daily').textContent = compact(daily);
+    $('#s-daily-sub').textContent = `${fighters} of ${m.length} members have hit something`;
+    const inactive = m.filter((x) => (x.daysOffline ?? 0) >= L.inactiveDays);
+    $('#s-inactive').textContent = inactive.length;
+    $('#s-inactive-sub').textContent = `Offline ${L.inactiveDays}+ days`;
+  }
+
+  // ---------- views ----------
+  const rankCell = (r) => `<span class="rank ${esc(r)}">${esc(r || '—')}</span>`;
+  const nameCell = (x) => `<span class="flag">${esc(x.flag || '')}</span><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>`;
+  const lastSeen = (d) => d == null ? '—' : d === 0 ? '<span class="pill ok">Today</span>' : d < 3 ? `<span class="pill ok">${d}d ago</span>` : d < 7 ? `<span class="pill warn">${d}d ago</span>` : `<span class="pill bad">${d}d ago</span>`;
+  const scoreCell = (score, dmg, max) => `<span class="score-cell"><b>${compact(score)}</b><span class="sub">${compact(dmg)}</span><span class="meter" aria-hidden="true"><i style="width:${max ? Math.round(score / max * 100) : 0}%"></i></span></span>`;
+  const formula = () => `Score = PvP damage ÷ power<sup>${data.latest.scoreExponent}</sup>. Big accounts naturally hit harder, so the score evens that out and rewards effort for account size. Damage is in grey.`;
+
+  const VIEWS = {
+    roster: {
+      note: () => `Everyone in the alliance right now, ${data.latest.members.length} members.`,
+      rows: () => data.latest.members,
+      cols: [
+        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
+        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
+        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
+        { key: 'level', label: 'Level', r: 1, get: (x) => x.level ?? 0, cell: (x) => (x.level ?? '—').toLocaleString() },
+        { key: 'pvp', label: 'Lifetime PvP', r: 1, get: (x) => Number(x.pvp), cell: (x) => compact(Number(x.pvp)) },
+        { key: 'seen', label: 'Last online', get: (x) => -(x.daysOffline ?? 999), cell: (x) => lastSeen(x.daysOffline) },
+      ],
+      def: 'power',
+    },
+    daily: {
+      note: () => `Damage dealt since today's reset. Refreshes about every 15 minutes. ${formula()}`,
+      rows: () => data.latest.members,
+      cols: [
+        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
+        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
+        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
+        { key: 'score', label: 'Score (damage)', get: (x) => x.dailyScore, cell: (x, max) => scoreCell(x.dailyScore, x.dailyDmg, max), max: (rows) => Math.max(...rows.map((r) => r.dailyScore)) },
+      ],
+      def: 'score',
+    },
+    season: {
+      note: () => {
+        const S = data.latest.season;
+        const from = S.trackedFrom ? ` Tracking began ${fmtDate(S.trackedFrom)}, part-way through this season, so totals count from then.` : '';
+        return `Damage this season so far.${from} ${formula()}`;
+      },
+      rows: () => data.latest.members,
+      cols: [
+        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
+        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
+        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
+        { key: 'score', label: 'Total score (damage)', get: (x) => x.seasonScore, cell: (x, max) => scoreCell(x.seasonScore, x.seasonDmg, max), max: (rows) => Math.max(...rows.map((r) => r.seasonScore)) },
+      ],
+      def: 'score',
+    },
+    last: {
+      note: () => data.prev ? `Final standings for Season ${data.prev.season} (${fmtDate(data.prev.from)} to ${fmtDate(data.prev.to)}). Frozen when the new season started.` : 'This fills in automatically when the current season ends.',
+      rows: () => data.prev?.rows || [],
+      cols: [
+        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
+        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: nameCell, asc: true },
+        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
+        { key: 'score', label: 'Total score (damage)', get: (x) => x.score, cell: (x, max) => scoreCell(x.score, x.dmg, max), max: (rows) => Math.max(...rows.map((r) => r.score)) },
+      ],
+      def: 'score',
+    },
+    inactive: {
+      note: () => `Members offline ${data.latest.inactiveDays}+ days, or with no PvP damage this season. Deleted accounts are flagged.`,
+      rows: () => data.latest.members.filter((x) => (x.daysOffline ?? 0) >= data.latest.inactiveDays || x.seasonDmg === 0 || x.deleted),
+      cols: [
+        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => rankCell(x.rank) },
+        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: (x) => nameCell(x) + (x.deleted ? ' <span class="pill bad">Deleted</span>' : ''), asc: true },
+        { key: 'power', label: 'Power', r: 1, get: (x) => x.power, cell: (x) => powerT(x.power) },
+        { key: 'seen', label: 'Last online', get: (x) => x.daysOffline ?? 0, cell: (x) => lastSeen(x.daysOffline) },
+        { key: 'season', label: 'Season damage', r: 1, get: (x) => x.seasonDmg, cell: (x) => x.seasonDmg ? compact(x.seasonDmg) : '<span class="pill warn">None</span>' },
+      ],
+      def: 'seen',
+    },
+    changes: {
+      note: () => 'Who joined and who left, newest first. Starts from the day tracking began.',
+      rows: () => [...data.changes].reverse(),
+      cols: [
+        { key: 't', label: 'When', get: (x) => x.t, cell: (x) => `${fmtDate(x.t.slice(0, 10))} <span class="sub">${ago(x.t)}</span>` },
+        { key: 'type', label: '', get: (x) => x.type, cell: (x) => x.type === 'join' ? '<span class="pill ok">Joined</span>' : '<span class="pill bad">Left</span>' },
+        { key: 'name', label: 'Player', get: (x) => x.name.toLowerCase(), cell: (x) => `<button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>`, asc: true },
+        { key: 'rank', label: 'Rank', get: (x) => RANKS.indexOf(x.rank), cell: (x) => x.rank ? rankCell(x.rank) : '—' },
+        { key: 'power', label: 'Power', r: 1, get: (x) => x.power ?? 0, cell: (x) => x.power ? powerT(x.power) : '—' },
+      ],
+      def: 't',
+    },
+  };
+
+  function render() {
+    if (!data.latest) return;
+    const V = VIEWS[view];
+    document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
+    $('#view-note').innerHTML = V.note();
+    const sort = sorts[view] || { key: V.def, dir: -1 };
+    const col = V.cols.find((c) => c.key === sort.key) || V.cols[0];
+    let rows = V.rows().filter((x) => !x.rank || ranks.has(x.rank));
+    if (query) rows = rows.filter((x) => x.name.toLowerCase().includes(query));
+    rows = [...rows].sort((a, b) => { const A = col.get(a), B = col.get(b); return (A > B ? 1 : A < B ? -1 : 0) * sort.dir; });
+    const scoreCol = V.cols.find((c) => c.max);
+    const max = scoreCol ? scoreCol.max(V.rows()) : 0;
+    const thead = '<tr><th class="r">#</th>' + V.cols.map((c) => {
+      const s = c.key === col.key ? (sort.dir < 0 ? 'descending' : 'ascending') : 'none';
+      return `<th class="${c.r ? 'r' : ''}" aria-sort="${s}">${c.label ? `<button data-sort="${c.key}">${c.label}</button>` : ''}</th>`;
+    }).join('') + '</tr>';
+    $('#table thead').innerHTML = thead;
+    const ranked = col.key === 'score' && sort.dir < 0;
+    $('#table tbody').innerHTML = rows.length ? rows.map((x, i) =>
+      `<tr class="${ranked && i < 3 ? 'top' : ''}"><td class="pos r">${i + 1}</td>` + V.cols.map((c) => `<td class="${c.r ? 'r' : ''}">${c.cell(x, max)}</td>`).join('') + '</tr>'
+    ).join('') : `<tr><td class="empty" colspan="${V.cols.length + 1}">${view === 'changes' ? 'No joins or leaves recorded yet.' : view === 'last' ? 'No finished season yet.' : 'No players match.'}</td></tr>`;
+  }
+
+  // ---------- player drawer ----------
+  function chart(values, dates, kind, fmt) {
+    const W = 420, H = 150, P = { l: 8, r: 54, t: 10, b: 22 };
+    const pts = values.map((v, i) => ({ v, i })).filter((p) => p.v != null);
+    if (pts.length < 2) return '<p class="note">Builds up as days pass. Check back tomorrow.</p>';
+    const vals = pts.map((p) => p.v);
+    let lo = kind === 'bar' ? 0 : Math.min(...vals), hi = Math.max(...vals);
+    if (hi === lo) { hi = hi * 1.01 + 1; lo = kind === 'bar' ? 0 : lo * 0.99; }
+    const n = values.length, iw = W - P.l - P.r, ih = H - P.t - P.b;
+    const x = (i) => P.l + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
+    const y = (v) => P.t + ih - ((v - lo) / (hi - lo)) * ih;
+    const grid = [lo, (lo + hi) / 2, hi].map((g) => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(g)}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${W - P.r + 6}" y="${y(g) + 4}">${fmt(g)}</text>`).join('');
+    const labels = `<text x="${P.l}" y="${H - 6}">${fmtDate(dates[0])}</text><text x="${W - P.r}" y="${H - 6}" text-anchor="end">${fmtDate(dates[n - 1])}</text>`;
+    let marks;
+    if (kind === 'bar') {
+      const bw = Math.max(2, iw / n * 0.7);
+      marks = pts.map((p) => `<rect x="${x(p.i) - bw / 2}" y="${y(p.v)}" width="${bw}" height="${Math.max(0, y(lo) - y(p.v))}" rx="1.5" fill="var(--bar)"/>`).join('');
+    } else {
+      const d = pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
+      const area = `${d}L${x(pts.at(-1).i).toFixed(1)},${y(lo)}L${x(pts[0].i).toFixed(1)},${y(lo)}Z`;
+      const last = pts.at(-1);
+      marks = `<path d="${area}" fill="var(--gold)" fill-opacity=".12"/><path d="${d}" fill="none" stroke="var(--gold)" stroke-width="2"/><circle cx="${x(last.i)}" cy="${y(last.v)}" r="3.5" fill="var(--gold)"/>`;
+    }
+    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">${grid}${marks}${labels}</svg></div>`;
+  }
+
+  function openPlayer(id) {
+    const L = data.latest;
+    const m = L.members.find((x) => String(x.id) === String(id));
+    const h = data.history?.players?.[id];
+    const days = data.history?.days || [];
+    const name = m?.name || h?.n || data.changes.find((c) => String(c.id) === String(id))?.name || 'Player';
+    const kv = (label, val) => `<div><label>${label}</label><span class="num">${val}</span></div>`;
+    let html = `<button class="x" id="close" aria-label="Close">×</button><h2 id="p-name">${esc(m?.flag || '')} ${esc(name)}</h2>`;
+    if (m) {
+      html += `<p class="note" style="margin-top:6px">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()} · in the alliance since ${fmtDate(m.firstSeen)}${m.firstSeen === L.trackingSince.slice(0, 10) ? ' (or earlier)' : ''}</p>`;
+      html += `<div class="kv">${kv('Power', powerT(m.power))}${kv('Peak power', powerT(m.maxPower))}${kv('Today', compact(m.dailyDmg) + '<span class="sub">score ' + compact(m.dailyScore) + '</span>')}${kv('This season', compact(m.seasonDmg) + '<span class="sub">score ' + compact(m.seasonScore) + '</span>')}${kv('Lifetime PvP', compact(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
+    } else {
+      html += '<p class="note">No longer in the alliance.</p>';
+    }
+    if (h && days.length) {
+      const N = Math.min(days.length, 60), s = days.length - N;
+      const pDays = days.slice(s), pPow = h.p.slice(s), pDmg = h.d.slice(s);
+      if (m) { pDays.push(L.gameDay); pPow.push(m.power); }
+      html += `<div class="chart-title">Power</div>${chart(pPow, pDays, 'line', powerT)}`;
+      html += `<div class="chart-title">PvP damage per day</div>${chart(pDmg, days.slice(s), 'bar', (v) => compact(v, 1))}`;
+    } else {
+      html += '<p class="note">Daily history starts after the first full day of tracking.</p>';
+    }
+    if (m) html += `<p class="note" style="margin-top:18px"><a href="https://kg.dbapp.ru/character/${m.id}" target="_blank" rel="noopener" style="color:inherit">Open on KG Companion</a></p>`;
+    const dr = $('#drawer'); dr.innerHTML = html; dr.hidden = false; $('#scrim').hidden = false;
+    $('#close').focus();
+  }
+  const closePlayer = () => { $('#drawer').hidden = true; $('#scrim').hidden = true; };
+
+  // ---------- events ----------
+  const setView = (v) => { if (!VIEWS[v]) v = 'roster'; view = v; try { history.replaceState(null, '', '#' + v); } catch {} render(); };
+  document.querySelector('.tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-view]'); if (b) setView(b.dataset.view); });
+  $('#rank-chips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    const r = b.dataset.rank; ranks.has(r) ? ranks.delete(r) : ranks.add(r);
+    if (!ranks.size) RANKS.forEach((x) => ranks.add(x));
+    syncChips(); store.set('ranks', [...ranks]); render();
+  });
+  const syncChips = () => document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', ranks.has(c.dataset.rank)));
+  $('#q').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
+  $('#table').addEventListener('click', (e) => {
+    const s = e.target.closest('button[data-sort]');
+    if (s) {
+      const V = VIEWS[view], cur = sorts[view] || { key: V.def, dir: -1 };
+      const c = V.cols.find((x) => x.key === s.dataset.sort);
+      sorts[view] = cur.key === c.key ? { key: c.key, dir: -cur.dir } : { key: c.key, dir: c.asc ? 1 : -1 };
+      store.set('sorts', sorts); render(); return;
+    }
+    const n = e.target.closest('.name-btn'); if (n) openPlayer(n.dataset.id);
+  });
+  $('#drawer').addEventListener('click', (e) => { if (e.target.id === 'close') closePlayer(); });
+  $('#scrim').addEventListener('click', closePlayer);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePlayer(); });
+
+  syncChips();
+  setView((location.hash || '').slice(1) || 'roster');
+  load();
+  setInterval(load, 5 * 60 * 1000);
+})();
+</script>
+<!--ARTIFACT-BODY-END-->
+</body>
+</html>
