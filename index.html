@@ -128,6 +128,20 @@ tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
 .rank.R3 { background: var(--r3-bg); color: var(--r3); } .rank.R2 { background: var(--r2-bg); color: var(--r2); }
 .rank.R1 { background: var(--r1-bg); color: var(--r1); }
 .name-btn { all: unset; cursor: pointer; font-weight: 500; }
+.days-mini, .seen-mini { display: none; }
+.growth, .days-cell { font-variant-numeric: tabular-nums; }
+.weeks { display: grid; gap: 10px; margin-top: 4px; }
+.wk { display: grid; grid-template-columns: 84px minmax(0, 1fr) 118px; align-items: center; gap: 12px; font-size: 14.5px; }
+.wk > span:first-child { color: var(--ink-2); }
+.wk > span:last-child { text-align: right; }
+.wk b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.wk small { display: block; color: var(--muted); font-size: 12.5px; }
+.wk .bar { height: 8px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+.wk .bar i { display: block; height: 100%; background: var(--violet-strong); border-radius: 4px; }
+.wk.future { color: var(--muted); }
+.wk.future > span:last-child { font-size: 13px; }
+.drawer .note.best { margin: 10px 0 0; }
+.drawer .note.best b { color: var(--ink); }
 .rank.mini { display: none; }
 .name-btn:hover { text-decoration: underline; }
 .dmg { color: var(--muted); margin-left: 6px; }
@@ -144,6 +158,9 @@ tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
   .pos .medal + .n { display: none; }
   th:nth-child(2), td:nth-child(2) { display: none; }
   #table:not([data-view="roster"]) th:nth-child(4), #table:not([data-view="roster"]) td:nth-child(4) { display: none; }
+  #table[data-view="season"] th:nth-child(7), #table[data-view="season"] td:nth-child(7), #table[data-view="last"] th:nth-child(7), #table[data-view="last"] td:nth-child(7) { display: none; }
+  #table[data-view="season"] .days-mini, #table[data-view="last"] .days-mini, #table[data-view="roster"] .seen-mini { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  #table[data-view="roster"] th:nth-child(6), #table[data-view="roster"] td:nth-child(6) { display: none; }
   .rank.mini { display: inline-block; min-width: 0; font-size: 11px; padding: 3px 4px; margin-right: 6px; vertical-align: 1px; }
   th { white-space: normal; vertical-align: bottom; }
   .tabs { gap: 0 18px; }
@@ -247,6 +264,7 @@ footer a { color: var(--ink-2); }
   };
   const utcStamp = (iso) => iso.slice(0, 16).replace('T', ' ') + ' UTC';
   const fmtDate = (d) => d ? new Date(d + (d.length === 10 ? 'T00:00:00Z' : '')).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—';
+  const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400e3);
   const addDays = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 86400e3).toISOString().slice(0, 10);
 
   // ---------- state ----------
@@ -333,6 +351,58 @@ footer a { color: var(--ink-2); }
     return r;
   }
 
+  // ---------- per-player breakdowns from daily history ----------
+  const histOf = (id) => data.history?.players?.[String(id)];
+  // date -> damage for one player (history plus today's running total)
+  function dmgByDate(id, x) {
+    const h = histOf(id), days = data.history?.days || [], m = new Map();
+    if (h) { const off = days.length - h.d.length; days.forEach((d, i) => { const v = h.d[i - off]; if (v != null) m.set(d, v); }); }
+    if (x && x.dailyDmg != null) m.set(data.latest.gameDay, x.dailyDmg);
+    return m;
+  }
+  // dates of a season that count (not before tracking, not left out, not in the future)
+  function seasonDates(start, length, opts = {}) {
+    const today = data.latest.gameDay, out = [];
+    for (let i = 0; i < length; i++) {
+      const d = addDays(start, i);
+      if (d > today) break;
+      if (opts.current && (d < data.latest.season.countingFrom || excluded.has(d))) continue;
+      out.push(d);
+    }
+    return out;
+  }
+  // days with any damage: { n, of }
+  let foughtCache = new Map(), foughtKey = '';
+  function fought(x, which = 'current') {
+    const key = which + '|' + [...excluded].sort().join(',');
+    if (key !== foughtKey) { foughtCache = new Map(); foughtKey = key; }
+    if (foughtCache.has(x.id)) return foughtCache.get(x.id);
+    let dates;
+    if (which === 'current') { const S = data.latest.season; dates = S.startedOn ? seasonDates(S.startedOn, S.length || 28, { current: true }) : []; }
+    else { const P = data.prev; dates = seasonDates(P.from, daysBetween(P.from, P.to) + 1); }
+    const dm = dmgByDate(x.id, which === 'current' ? x : null);
+    const r = { n: dates.filter((d) => (dm.get(d) || 0) > 0).length, of: dates.length };
+    foughtCache.set(x.id, r);
+    return r;
+  }
+  const foughtTxt = (f) => `${f.n}/${f.of}`;
+  const foughtCol = (which) => ({ key: 'days', label: 'Days fought', get: (x) => fought(x, which).n, cell: (x) => `<span class="days-cell">${foughtTxt(fought(x, which))}</span>` });
+  const nameWithDays = (which) => (x) => nameCell(x) + `<span class="days-mini">${foughtTxt(fought(x, which))} days fought</span>`;
+  // max power gained since the season started (T); null if unknown
+  function growth(x) {
+    const S = data.latest.season, h = histOf(x.id), days = data.history?.days || [];
+    if (!h || !S.startedOn) return null;
+    const off = days.length - h.p.length;
+    let before = null, firstIn = null;
+    for (let i = 0; i < days.length; i++) {
+      const v = h.p[i - off]; if (v == null) continue;
+      if (days[i] < S.startedOn) before = v; else if (firstIn == null) firstIn = v;
+    }
+    const startP = before ?? firstIn;
+    return startP == null ? null : (x.maxPower - startP) / 1e12;
+  }
+  const fmtGrowth = (g) => g == null ? '—' : (g >= 0 ? '+' : '−') + Math.abs(g).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   function calendar() {
     const S = data.latest.season;
     if (!S.startedOn) return '';
@@ -368,7 +438,7 @@ footer a { color: var(--ink-2); }
       counting: () => `${data.latest.members.length} members in [${esc(data.latest.alliance.tag)}] right now.`,
       extra: () => '',
       rows: () => data.latest.members,
-      cols: [...base, { key: 'seen', label: 'Last online', get: (x) => -(x.daysOffline ?? 999), cell: (x) => seen(x.daysOffline) }],
+      cols: [base[0], { ...base[1], cell: (x) => nameCell(x) + `<span class="seen-mini">Online: ${seen(x.daysOffline)}</span>` }, base[2], { key: 'growth', label: 'Growth this season (T)', get: (x) => growth(x) ?? -Infinity, cell: (x) => `<span class="growth">${fmtGrowth(growth(x))}</span>` }, { key: 'seen', label: 'Last online', get: (x) => -(x.daysOffline ?? 999), cell: (x) => seen(x.daysOffline) }],
       def: 'power', medals: false,
     },
     daily: {
@@ -389,7 +459,7 @@ footer a { color: var(--ink-2); }
       },
       extra: () => formulaBox() + calendar(),
       rows: () => data.latest.members,
-      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => seasonOf(x).score, cell: (x) => scoreCell(seasonOf(x).score, seasonOf(x).dmg) }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower)],
+      cols: [base[0], { ...base[1], cell: nameWithDays('current') }, base[2], { key: 'score', label: 'Total Activity (Damage)', get: (x) => seasonOf(x).score, cell: (x) => scoreCell(seasonOf(x).score, seasonOf(x).dmg) }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower), foughtCol('current')],
       def: 'score', medals: true,
     },
     last: {
@@ -398,7 +468,7 @@ footer a { color: var(--ink-2); }
       counting: () => data.prev ? `Counted ${data.prev.from} to ${data.prev.to}` : 'This fills in automatically when the current season ends.',
       extra: () => data.prev ? formulaBox() : '',
       rows: () => data.prev?.rows || [],
-      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.score, cell: (x) => scoreCell(x.score, x.dmg) }, adjCol((x) => x.dmg, (x) => x.maxPower ?? x.power)],
+      cols: [base[0], { ...base[1], cell: nameWithDays('prev') }, base[2], { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.score, cell: (x) => scoreCell(x.score, x.dmg) }, adjCol((x) => x.dmg, (x) => x.maxPower ?? x.power), foughtCol('prev')],
       def: 'score', medals: true,
     },
   };
@@ -455,6 +525,33 @@ footer a { color: var(--ink-2); }
     return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img">${grid}${marks}${labels}</svg></div>`;
   }
 
+  // This season's damage split into the rest week and Weeks 1–3, plus the best single day.
+  function weekBreakdown(m) {
+    const S = data.latest.season;
+    if (!S.startedOn) return '';
+    const today = data.latest.gameDay, dm = dmgByDate(m.id, m);
+    const weeks = [];
+    let best = null;
+    for (let w = 0; w * 7 < (S.length || 28); w++) {
+      let dmg = 0, n = 0, of = 0;
+      for (let i = w * 7; i < Math.min(S.length || 28, w * 7 + 7); i++) {
+        const d = addDays(S.startedOn, i);
+        if (d > today || d < S.countingFrom || excluded.has(d)) continue;
+        const v = dm.get(d) || 0;
+        of++; dmg += v; if (v > 0) n++;
+        if (v > 0 && (!best || v > best.v)) best = { d, v };
+      }
+      weeks.push({ label: w === 0 ? 'Rest week' : `Week ${w}`, dmg, n, of });
+    }
+    const top = Math.max(1, ...weeks.map((w) => w.dmg));
+    const rows = weeks.map((w) => w.of === 0
+      ? `<div class="wk future"><span>${w.label}</span><span class="bar"></span><span>Not started</span></div>`
+      : `<div class="wk"><span>${w.label}</span><span class="bar"><i style="width:${Math.round(w.dmg / top * 100)}%"></i></span><span><b>${fmtT(w.dmg)}</b><small>${w.n}/${w.of} days</small></span></div>`).join('');
+    const bestTxt = best ? `Best day: <b>${fmtDate(best.d)}</b>, ${fmtT(best.v)}` : 'No damage yet this season.';
+    const exTxt = excluded.size ? ` Left-out days aren't counted.` : '';
+    return `<div class="chart-title">Damage by week</div><div class="weeks">${rows}</div><p class="note best">${bestTxt}${exTxt}</p>`;
+  }
+
   function openPlayer(id) {
     const L = data.latest;
     const m = L.members.find((x) => String(x.id) === String(id));
@@ -465,15 +562,17 @@ footer a { color: var(--ink-2); }
     let html = `<button class="x" id="close" aria-label="Close">×</button><h2 id="p-name">${esc(name)}</h2>`;
     if (m) {
       html += `<p class="sub">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()}</p>`;
-      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore) + ' · Adjusted ' + fmtAdj(adjusted(m.dailyDmg, m.maxPower)))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore) + ' · Adjusted ' + fmtAdj(adjusted(m.seasonDmg, m.maxPower)))}${kv('PvP total (KG Companion)', fmtT(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
+      const g = growth(m), f = fought(m);
+      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T', g == null ? '' : fmtGrowth(g) + 'T this season')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore) + ' · Adjusted ' + fmtAdj(adjusted(m.dailyDmg, m.maxPower)))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore) + ' · Adjusted ' + fmtAdj(adjusted(m.seasonDmg, m.maxPower)))}${kv('PvP total (KG Companion)', fmtT(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}${kv('Days fought', `${f.n} of ${f.of}`, 'this season')}</div>`;
+      html += weekBreakdown(m);
     } else {
       html += '<p class="note">No longer in the alliance.</p>';
     }
     if (h && days.length) {
       const N = Math.min(days.length, 60), s = days.length - N;
       const pDays = days.slice(s), pPow = h.p.slice(s), pDmg = h.d.slice(s);
-      if (m) { pDays.push(L.gameDay); pPow.push(m.power); }
-      html += `<div class="chart-title">Power (T)</div>${chart(pPow, pDays, 'line', (v) => tNum(v))}`;
+      if (m) { pDays.push(L.gameDay); pPow.push(m.maxPower); }
+      html += `<div class="chart-title">Max power (T)</div>${chart(pPow, pDays, 'line', (v) => tNum(v))}`;
       html += `<div class="chart-title">PvP damage per day</div>${chart(pDmg, days.slice(s), 'bar', (v) => compact(v, 1))}`;
     } else {
       html += '<p class="note">Daily history starts after the first full day of tracking.</p>';

@@ -214,7 +214,7 @@ if (!firstRun && today !== st.day) {
     const h = (history.players[id] ??= { n: m.nickname, p: [], d: [] });
     h.n = m.nickname;
     while (h.p.length < n - 1) { h.p.push(null); h.d.push(null); }
-    h.p.push(Number(m.power) || 0);
+    h.p.push(Math.max(Number(m.maxPower) || 0, Number(m.power) || 0));   // max power, same as imported history
     h.d.push(dmg);
   }
   for (const h of Object.values(history.players)) {
