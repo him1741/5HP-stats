@@ -7,7 +7,7 @@
 <title>5HP Alliance Stats</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Layout: slim brand bar → season heading → rank filter + tabs → one section per tab (title, formula panel, season calendar, ledger table). Dark only, to match RISE. */
+/* Layout: slim brand bar → season heading → rank filter + tabs → one section per tab (title, formula panel, season calendar, ledger table). Dark only. */
 :root {
   --bg: #0f1226;
   --bar: #151a33;
@@ -281,13 +281,13 @@ footer a { color: var(--ink-2); }
   const fmtScore = (s) => (s ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtT = (n) => ((n ?? 0) / 1e12).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'T';
   const scoreCell = (s, d) => `<b>${fmtScore(s)}</b><span class="dmg">(${fmtT(d)})</span>`;
-  // RISE-style adjusted score: damage ÷ max power^0.6, both in T, so big and small accounts sit closer together.
+  // Adjusted score: damage ÷ max power^0.6, both in T, so big and small accounts sit closer together.
   const ADJ_EXP = 0.6;
   const adjusted = (dmg, maxPower) => (maxPower > 0 ? (dmg / 1e12) / Math.pow(maxPower / 1e12, ADJ_EXP) : 0);
   const fmtAdj = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const adjCol = (dmgOf, maxOf) => ({ key: 'adj', label: 'Adjusted', get: (x) => adjusted(dmgOf(x), maxOf(x)), cell: (x) => `<b>${fmtAdj(adjusted(dmgOf(x), maxOf(x)))}</b>` });
   const seen = (d) => d == null ? '—' : d === 0 ? '<span class="seen-ok">Today</span>' : d < 3 ? `<span class="seen-ok">${d}d ago</span>` : d < 7 ? `<span class="seen-warn">${d}d ago</span>` : `<span class="seen-bad">${d}d ago</span>`;
-  const formulaBox = () => `<div class="formula"><code>Activity = PvP Damage ÷ Max Power</code><p>The same activity score the game and KG Companion use: a higher score means more fighting for the account's size. Damage is shown in brackets.</p><code class="second">Adjusted = PvP Damage ÷ Max Power<sup>${ADJ_EXP}</sup></code><p>The RISE-style score. Activity tends to favour small accounts, so this divides by power to the 0.6 instead, giving big accounts more credit for their bigger totals and putting large and small accounts on a more even footing. Both use damage and max power in T. Click a column heading to sort by it.</p></div>`;
+  const formulaBox = () => `<div class="formula"><code>Activity = PvP Damage ÷ Max Power</code><p>The same activity score the game and KG Companion use: a higher score means more fighting for the account's size. Damage is shown in brackets.</p><code class="second">Adjusted = PvP Damage ÷ Max Power<sup>${ADJ_EXP}</sup></code><p>Activity tends to favour small accounts, so this divides by power to the 0.6 instead, giving big accounts more credit for their bigger totals and putting large and small accounts on a more even footing. Both use damage and max power in T. Click a column heading to sort by it.</p></div>`;
 
   function calendar() {
     const S = data.latest.season;

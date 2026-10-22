@@ -79,11 +79,11 @@ The site's title, alliance tag and name come from the live data, so you don't ha
 
 ## Optional: your own web address
 
-To use an address like `5hpstats.com` (as riseup1623.com does), buy a domain from any registrar (Cloudflare, Namecheap, Porkbun; around $10–15 a year), then enter it under **Settings → Pages → Custom domain** and follow GitHub's instructions for the DNS records.
+To use an address like `5hpstats.com`, buy a domain from any registrar (Cloudflare, Namecheap, Porkbun; around $10–15 a year), then enter it under **Settings → Pages → Custom domain** and follow GitHub's instructions for the DNS records.
 
 ## Adding another alliance later
 
-Make a second repository the same way and change `allianceId` in its `config.json`. (If you'd rather have them under one site, like `riseup1623.com/apex`, that's a small change to the scripts and can be added later.)
+Make a second repository the same way and change `allianceId` in its `config.json`. (If you'd rather have them under one site, like `yoursite.com/other-alliance`, that's a small change to the scripts and can be added later.)
 
 ---
 
