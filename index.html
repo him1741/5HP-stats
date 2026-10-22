@@ -61,11 +61,12 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .demo { margin-top: 14px; padding: 10px 14px; border: 1px solid #6b5a1e; background: #2a2410; color: #f3e3a8; border-radius: 10px; font-size: 14.5px; }
 
 /* Filters + tabs */
-.show { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-top: 20px; }
+.show { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .show > span { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
 .chip { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; min-width: 50px; padding: 5px 12px; font: 600 15px/1.2 var(--font); cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--chip); border-color: var(--chip-line); color: var(--chip-ink); }
-.tabs { display: flex; flex-wrap: wrap; gap: 4px 28px; margin-top: 16px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px 28px; margin-top: 22px; border-bottom: 1px solid var(--line); }
 .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 10px 2px; font: 600 15px/1.2 var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--violet); cursor: pointer; }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--violet-strong); }
@@ -79,7 +80,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .formula { margin-top: 16px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 14px 16px; }
 .formula code { display: block; font: 600 16px/1.4 var(--mono); color: var(--cyan); margin-bottom: 6px; }
 .formula p { margin: 0; color: var(--ink-2); font-size: 15px; max-width: 72ch; }
-.search { display: block; margin-top: 16px; max-width: 320px; }
+.search { display: block; flex: 1 1 220px; max-width: 320px; }
 .search input { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font: 16px var(--font); }
 .search input::placeholder { color: var(--muted); }
 
@@ -120,6 +121,7 @@ tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
 .rank.R3 { background: var(--r3-bg); color: var(--r3); } .rank.R2 { background: var(--r2-bg); color: var(--r2); }
 .rank.R1 { background: var(--r1-bg); color: var(--r1); }
 .name-btn { all: unset; cursor: pointer; font-weight: 500; }
+.rank.mini { display: none; }
 .name-btn:hover { text-decoration: underline; }
 .dmg { color: var(--muted); margin-left: 6px; }
 .seen-ok { color: var(--r3); } .seen-warn { color: #f0b45a; } .seen-bad { color: #ff8a80; }
@@ -130,7 +132,11 @@ tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
   th { font-size: 11.5px; letter-spacing: .04em; }
   td { font-size: 15px; }
   th:first-child, td:first-child { padding-left: 12px; }
-  .dmg { display: block; margin: 0; font-size: 13px; }
+  .dmg { display: block; margin: 0; font-size: 12px; letter-spacing: -.01em; }
+  .pos .medal { font-size: 17px; margin: 0; }
+  .pos .medal + .n { display: none; }
+  th:nth-child(2), td:nth-child(2) { display: none; }
+  .rank.mini { display: inline-block; min-width: 0; font-size: 11px; padding: 3px 4px; margin-right: 6px; vertical-align: 1px; }
   th { white-space: normal; vertical-align: bottom; }
   .tabs { gap: 0 18px; }
 }
@@ -174,14 +180,6 @@ footer a { color: var(--ink-2); }
     <div class="demo" id="demo-banner" hidden>Preview: the roster is real (pulled Oct 22). Daily and season damage are simulated so you can see how the tables fill in once tracking runs.</div>
   </section>
 
-  <div class="show" id="rank-chips" aria-label="Show ranks">
-    <span>Show:</span>
-    <button class="chip" data-rank="R5" aria-pressed="true">R5</button>
-    <button class="chip" data-rank="R4" aria-pressed="true">R4</button>
-    <button class="chip" data-rank="R3" aria-pressed="true">R3</button>
-    <button class="chip" data-rank="R2" aria-pressed="true">R2</button>
-    <button class="chip" data-rank="R1" aria-pressed="true">R1</button>
-  </div>
 
   <nav class="tabs" role="tablist" aria-label="Views">
     <button role="tab" data-view="roster" id="tab-roster">Master roster</button>
@@ -193,7 +191,17 @@ footer a { color: var(--ink-2); }
   <div class="section-head"><h2 id="sec-title"></h2><span class="refresh" id="sec-refresh"></span></div>
   <p class="counting" id="sec-counting"></p>
   <div id="sec-extra"></div>
-  <label class="search"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"></label>
+  <div class="controls">
+    <div class="show" id="rank-chips" aria-label="Show ranks">
+      <span>Show:</span>
+      <button class="chip" data-rank="R5" aria-pressed="true">R5</button>
+      <button class="chip" data-rank="R4" aria-pressed="true">R4</button>
+      <button class="chip" data-rank="R3" aria-pressed="true">R3</button>
+      <button class="chip" data-rank="R2" aria-pressed="true">R2</button>
+      <button class="chip" data-rank="R1" aria-pressed="true">R1</button>
+    </div>
+    <label class="search"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"></label>
+  </div>
   <div class="table-box"><table id="table"><thead></thead><tbody></tbody></table></div>
 </main>
 
@@ -266,10 +274,11 @@ footer a { color: var(--ink-2); }
 
   // ---------- pieces ----------
   const rankCell = (r) => `<span class="rank ${esc(r)}">${esc(r || '—')}</span>`;
-  const nameCell = (x) => `<button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>`;
+  const nameCell = (x) => `<span class="rank mini ${esc(x.rank)}">${esc(x.rank)}</span><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>`;
   const powerCell = (x) => `<span class="pw">${tNum(x.power)}</span>`;
   const fmtScore = (s) => (s ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const scoreCell = (s, d) => `<b>${fmtScore(s)}</b><span class="dmg">(${compact(d)})</span>`;
+  const fmtT = (n) => ((n ?? 0) / 1e12).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'T';
+  const scoreCell = (s, d) => `<b>${fmtScore(s)}</b><span class="dmg">(${fmtT(d)})</span>`;
   const seen = (d) => d == null ? '—' : d === 0 ? '<span class="seen-ok">Today</span>' : d < 3 ? `<span class="seen-ok">${d}d ago</span>` : d < 7 ? `<span class="seen-warn">${d}d ago</span>` : `<span class="seen-bad">${d}d ago</span>`;
   const formulaBox = () => `<div class="formula"><code>Activity = PvP Damage ÷ Max Power</code><p>The same activity score the game and KG Companion use. Dividing by a player's highest power lets big and small accounts be compared fairly: a higher score means more fighting for their size. Damage is shown in brackets.</p></div>`;
 
@@ -362,7 +371,7 @@ footer a { color: var(--ink-2); }
     const MED = ['🥇', '🥈', '🥉'], CLS = ['gold', 'silver', 'bronze'];
     $('#table tbody').innerHTML = rows.length ? rows.map((x, i) => {
       const top = podium && i < 3 && col.get(x) > 0;
-      return `<tr class="${top ? CLS[i] : ''}"><td class="pos">${top ? `<span class="medal">${MED[i]}</span>` : ''}${i + 1}</td>` + V.cols.map((c) => `<td>${c.cell(x)}</td>`).join('') + '</tr>';
+      return `<tr class="${top ? CLS[i] : ''}"><td class="pos">${top ? `<span class="medal">${MED[i]}</span>` : ''}<span class="n">${i + 1}</span></td>` + V.cols.map((c) => `<td>${c.cell(x)}</td>`).join('') + '</tr>';
     }).join('') : `<tr><td class="empty" colspan="${V.cols.length + 1}">${view === 'last' ? 'No finished season yet.' : 'No players match.'}</td></tr>`;
   }
 
@@ -402,7 +411,7 @@ footer a { color: var(--ink-2); }
     let html = `<button class="x" id="close" aria-label="Close">×</button><h2 id="p-name">${esc(name)}</h2>`;
     if (m) {
       html += `<p class="sub">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()}</p>`;
-      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', compact(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore))}${kv('This season', compact(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore))}${kv('PvP total (KG Companion)', compact(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
+      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore))}${kv('PvP total (KG Companion)', fmtT(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
     } else {
       html += '<p class="note">No longer in the alliance.</p>';
     }
