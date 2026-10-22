@@ -151,7 +151,7 @@ export async function backfill(ctx) {
       if (!list.length) continue;
       const dmg = list.reduce((s, r) => s + (r.diff > 0n ? r.diff : 0n), 0n);
       const pw = list.at(-1).maxPower || Number(m.power) || 0;
-      rows.push({ id: m.id, name: m.nickname, rank: m.allianceRankName || '', power: pw, dmg: Number(dmg), score: round(score(dmg, pw)), partial: false });
+      rows.push({ id: m.id, name: m.nickname, rank: m.allianceRankName || '', power: pw, maxPower: pw, dmg: Number(dmg), score: round(score(dmg, pw)), partial: false });
     }
     rows.sort((a, b) => b.score - a.score);
     prev = { season: prevInfo.season, from: prevInfo.dateStart, to: addDays(prevInfo.dateEnd, -1), rows, source: 'KG Companion' };

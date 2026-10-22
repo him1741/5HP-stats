@@ -161,7 +161,7 @@ if (!firstRun && (dateRoll || numberRoll)) {
     const dmg = nonNeg(big(pvpNow) - big(base.pvp));
     rows.push({
       id: Number(id), name: m?.nickname ?? prevRow?.name ?? st.known[id]?.name ?? id,
-      rank: m?.allianceRankName ?? prevRow?.rank ?? '', power,
+      rank: m?.allianceRankName ?? prevRow?.rank ?? '', power, maxPower: maxP,
       dmg: Number(dmg), score: round(score(dmg, maxP)),
       partial: base.since !== st.seasonStartedOn,
     });

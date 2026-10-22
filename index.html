@@ -80,6 +80,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .formula { margin-top: 16px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 14px 16px; }
 .formula code { display: block; font: 600 16px/1.4 var(--mono); color: var(--cyan); margin-bottom: 6px; }
 .formula p { margin: 0; color: var(--ink-2); font-size: 15px; max-width: 72ch; }
+.formula code.second { margin-top: 14px; }
 .search { display: block; flex: 1 1 220px; max-width: 320px; }
 .search input { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font: 16px var(--font); }
 .search input::placeholder { color: var(--muted); }
@@ -136,6 +137,7 @@ tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
   .pos .medal { font-size: 17px; margin: 0; }
   .pos .medal + .n { display: none; }
   th:nth-child(2), td:nth-child(2) { display: none; }
+  #table:not([data-view="roster"]) th:nth-child(4), #table:not([data-view="roster"]) td:nth-child(4) { display: none; }
   .rank.mini { display: inline-block; min-width: 0; font-size: 11px; padding: 3px 4px; margin-right: 6px; vertical-align: 1px; }
   th { white-space: normal; vertical-align: bottom; }
   .tabs { gap: 0 18px; }
@@ -279,8 +281,13 @@ footer a { color: var(--ink-2); }
   const fmtScore = (s) => (s ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtT = (n) => ((n ?? 0) / 1e12).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'T';
   const scoreCell = (s, d) => `<b>${fmtScore(s)}</b><span class="dmg">(${fmtT(d)})</span>`;
+  // RISE-style adjusted score: damage ÷ max power^0.6, both in T, so big and small accounts sit closer together.
+  const ADJ_EXP = 0.6;
+  const adjusted = (dmg, maxPower) => (maxPower > 0 ? (dmg / 1e12) / Math.pow(maxPower / 1e12, ADJ_EXP) : 0);
+  const fmtAdj = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const adjCol = (dmgOf, maxOf) => ({ key: 'adj', label: 'Adjusted', get: (x) => adjusted(dmgOf(x), maxOf(x)), cell: (x) => `<b>${fmtAdj(adjusted(dmgOf(x), maxOf(x)))}</b>` });
   const seen = (d) => d == null ? '—' : d === 0 ? '<span class="seen-ok">Today</span>' : d < 3 ? `<span class="seen-ok">${d}d ago</span>` : d < 7 ? `<span class="seen-warn">${d}d ago</span>` : `<span class="seen-bad">${d}d ago</span>`;
-  const formulaBox = () => `<div class="formula"><code>Activity = PvP Damage ÷ Max Power</code><p>The same activity score the game and KG Companion use. Dividing by a player's highest power lets big and small accounts be compared fairly: a higher score means more fighting for their size. Damage is shown in brackets.</p></div>`;
+  const formulaBox = () => `<div class="formula"><code>Activity = PvP Damage ÷ Max Power</code><p>The same activity score the game and KG Companion use: a higher score means more fighting for the account's size. Damage is shown in brackets.</p><code class="second">Adjusted = PvP Damage ÷ Max Power<sup>${ADJ_EXP}</sup></code><p>The RISE-style score. Activity tends to favour small accounts, so this divides by power to the 0.6 instead, giving big accounts more credit for their bigger totals and putting large and small accounts on a more even footing. Both use damage and max power in T. Click a column heading to sort by it.</p></div>`;
 
   function calendar() {
     const S = data.latest.season;
@@ -324,7 +331,7 @@ footer a { color: var(--ink-2); }
       counting: () => `Counting from ${data.latest.gameDay} 00:00 UTC`,
       extra: formulaBox,
       rows: () => data.latest.members,
-      cols: [...base, { key: 'score', label: 'Activity (Damage)', get: (x) => x.dailyScore, cell: (x) => scoreCell(x.dailyScore, x.dailyDmg) }],
+      cols: [...base, { key: 'score', label: 'Activity (Damage)', get: (x) => x.dailyScore, cell: (x) => scoreCell(x.dailyScore, x.dailyDmg) }, adjCol((x) => x.dailyDmg, (x) => x.maxPower)],
       def: 'score', medals: true,
     },
     season: {
@@ -336,7 +343,7 @@ footer a { color: var(--ink-2); }
       },
       extra: () => formulaBox() + calendar(),
       rows: () => data.latest.members,
-      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.seasonScore, cell: (x) => scoreCell(x.seasonScore, x.seasonDmg) }],
+      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.seasonScore, cell: (x) => scoreCell(x.seasonScore, x.seasonDmg) }, adjCol((x) => x.seasonDmg, (x) => x.maxPower)],
       def: 'score', medals: true,
     },
     last: {
@@ -345,7 +352,7 @@ footer a { color: var(--ink-2); }
       counting: () => data.prev ? `Counted ${data.prev.from} to ${data.prev.to}` : 'This fills in automatically when the current season ends.',
       extra: () => data.prev ? formulaBox() : '',
       rows: () => data.prev?.rows || [],
-      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.score, cell: (x) => scoreCell(x.score, x.dmg) }],
+      cols: [...base, { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.score, cell: (x) => scoreCell(x.score, x.dmg) }, adjCol((x) => x.dmg, (x) => x.maxPower ?? x.power)],
       def: 'score', medals: true,
     },
   };
@@ -363,11 +370,12 @@ footer a { color: var(--ink-2); }
     let rows = V.rows().filter((x) => !x.rank || ranks.has(x.rank));
     if (query) rows = rows.filter((x) => x.name.toLowerCase().includes(query));
     rows = [...rows].sort((a, b) => { const A = col.get(a), B = col.get(b); return (A > B ? 1 : A < B ? -1 : 0) * sort.dir; });
+    $('#table').dataset.view = view;
     $('#table thead').innerHTML = '<tr><th>#</th>' + V.cols.map((c) => {
       const s = c.key === col.key ? (sort.dir < 0 ? 'descending' : 'ascending') : 'none';
       return `<th aria-sort="${s}"><button data-sort="${c.key}">${c.label}</button></th>`;
     }).join('') + '</tr>';
-    const podium = V.medals && col.key === 'score' && sort.dir < 0 && !query;
+    const podium = V.medals && (col.key === 'score' || col.key === 'adj') && sort.dir < 0 && !query;
     const MED = ['🥇', '🥈', '🥉'], CLS = ['gold', 'silver', 'bronze'];
     $('#table tbody').innerHTML = rows.length ? rows.map((x, i) => {
       const top = podium && i < 3 && col.get(x) > 0;
@@ -411,7 +419,7 @@ footer a { color: var(--ink-2); }
     let html = `<button class="x" id="close" aria-label="Close">×</button><h2 id="p-name">${esc(name)}</h2>`;
     if (m) {
       html += `<p class="sub">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()}</p>`;
-      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore))}${kv('PvP total (KG Companion)', fmtT(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
+      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore) + ' · Adjusted ' + fmtAdj(adjusted(m.dailyDmg, m.maxPower)))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore) + ' · Adjusted ' + fmtAdj(adjusted(m.seasonDmg, m.maxPower)))}${kv('PvP total (KG Companion)', fmtT(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}</div>`;
     } else {
       html += '<p class="note">No longer in the alliance.</p>';
     }
