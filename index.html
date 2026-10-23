@@ -67,6 +67,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .chip { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; min-width: 50px; padding: 5px 12px; font: 600 15px/1.2 var(--font); cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--chip); border-color: var(--chip-line); color: var(--chip-ink); }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 22px; border-bottom: 1px solid var(--line); }
+@media (min-width: 1024px) { .tabs { justify-content: space-between; } }
 .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 10px 2px; font: 600 14px/1.2 var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--violet); cursor: pointer; }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--violet-strong); }
