@@ -46,7 +46,8 @@ const round = (x, n = 2) => Math.round(x * 10 ** n) / 10 ** n;
 
 async function fetchText(url) {
   if (process.env.FIXTURE_ACTIVITY) {
-    const s = new URL(url).searchParams.get('s');
+    const u = new URL(url), s = u.searchParams.get('s');
+    if (u.pathname.endsWith('/kvk')) return readFile(path.join(process.env.FIXTURE_ACTIVITY, 'kvk.json'), 'utf8');
     return readFile(path.join(process.env.FIXTURE_ACTIVITY, `activity-${s || 'current'}.json`), 'utf8');
   }
   const res = await fetch(url, {
@@ -351,6 +352,20 @@ if (dayNumber != null && dayNumber >= recalcDay && st.adjusted.season !== st.sea
   }
 }
 
+// Season wins (BL victories) for the Season highlights tab, newest first.
+// Keeps the previous list if KG Companion can't be reached this run.
+let wins = prevLatest?.wins ?? null;
+try {
+  const list = JSON.parse(await fetchText(`https://kg.dbapp.ru/api/alliance/${config.allianceId}/kvk`));
+  if (Array.isArray(list)) {
+    wins = list.filter((w) => w && w.season != null && w.date)
+      .map((w) => ({ season: Number(w.season), date: String(w.date).slice(0, 10) }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+} catch (e) {
+  console.warn(`Season wins unavailable (${e.message}); keeping the previous list.`);
+}
+
 const latest = {
   fetchedAt: now.toISOString(),
   gameDay: today,
@@ -367,6 +382,7 @@ const latest = {
   },
   scoreFormula: 'damage / maxPower',
   adjusted: { ...st.adjusted, recalcDay, minPowerT: adjMin / 1e12 },
+  wins,
   inactiveDays: config.inactiveDays ?? 3,
   members: rows,
 };

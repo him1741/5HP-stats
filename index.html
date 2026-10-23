@@ -199,6 +199,61 @@ footer a { color: var(--ink-2); }
 .drawer .note { color: var(--muted); font-size: 14.5px; }
 .drawer a { color: var(--chip-ink); }
 @media (prefers-reduced-motion: no-preference) { .drawer { animation: slide .18s ease-out; } @keyframes slide { from { transform: translateX(24px); opacity: .6; } } }
+[hidden] { display: none !important; }
+/* Season highlights */
+.hl { display: flex; flex-direction: column; gap: 20px; margin-top: 18px; }
+.hl-band { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px 32px; }
+.hl-intro { flex: 1 1 220px; align-self: center; min-width: 0; }
+.hl-emoji { font-size: 44px; line-height: 1; }
+.hl-intro h3 { margin: 12px 0 0; font-size: 21px; letter-spacing: .05em; text-transform: uppercase; }
+.hl-intro p { margin: 4px 0 0; font-size: 14.5px; color: var(--muted); }
+.hl-intro p.total { margin-top: 12px; font-size: 14px; color: var(--ink-2); }
+.podium { flex: 3 1 440px; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.pod { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; min-width: 0; }
+.pod .medal-big { font-size: 32px; line-height: 1; }
+.pod .name-btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 700; }
+.pod.p1 .name-btn { font-size: 20px; color: var(--gold); }
+.pod.p2 .name-btn { color: var(--silver); }
+.pod.p3 .name-btn { color: var(--bronze); }
+.pod .val { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pod.empty .val { color: var(--muted); }
+.step { width: 100%; margin-top: 6px; border-radius: 10px 10px 0 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; letter-spacing: .1em; border: 1px solid var(--line); border-bottom: 0; }
+.pod.p1 .step { height: 132px; color: var(--gold); }
+.pod.p2 .step { height: 100px; color: var(--silver); }
+.pod.p3 .step { height: 78px; color: var(--bronze); }
+.hl-band.hl-dmg .step { background: rgb(255 138 92 / .16); }
+.hl-band.hl-grow .step { background: rgb(127 220 159 / .14); }
+.hl-band.hl-champ .step { background: rgb(169 156 245 / .16); }
+.hl-rest { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 8px; align-self: center; }
+.hl-rest .lbl { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--violet); }
+.hl-rest .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14.5px; }
+.hl-rest .row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl-rest .row .p { color: var(--muted); margin-right: 4px; }
+.hl-rest .row b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.hl-wins { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+.hl-wins-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.hl-wins-head > div:first-child { display: flex; align-items: center; gap: 16px; }
+.hl-wins-head h3 { margin: 0; font-size: 21px; letter-spacing: .05em; }
+.hl-wins-head p { margin: 4px 0 0; font-size: 14.5px; color: var(--muted); }
+.hl-count { text-align: right; }
+.hl-count b { display: block; font-size: 40px; font-weight: 800; color: var(--gold); line-height: 1; }
+.hl-count span { font-size: 13px; color: var(--muted); }
+.wins { display: flex; flex-wrap: wrap; gap: 10px; }
+.win { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: 18px; border: 1px solid var(--line); background: var(--panel-2); }
+.win.latest { border-color: var(--gold); background: rgb(246 201 76 / .10); }
+.win b { font-size: 15px; font-weight: 700; color: var(--gold); }
+.win small { display: block; font-size: 12.5px; color: var(--ink-2); }
+@media (max-width: 560px) {
+  .hl-band, .hl-wins { padding: 18px; }
+  .hl-emoji { font-size: 36px; }
+  .podium { gap: 8px; }
+  .pod .name-btn { font-size: 14px; }
+  .pod.p1 .name-btn { font-size: 16px; }
+  .pod .val { font-size: 14.5px; }
+  .pod .medal-big { font-size: 26px; }
+  .pod.p1 .step { height: 104px; } .pod.p2 .step { height: 80px; } .pod.p3 .step { height: 62px; }
+  .win { font-size: 16px; padding: 8px 12px; }
+}
 </style>
 <!--ARTIFACT-HEAD-END-->
 </head>
@@ -224,6 +279,7 @@ footer a { color: var(--ink-2); }
     <button role="tab" data-view="daily" id="tab-daily">Daily PvP</button>
     <button role="tab" data-view="season" id="tab-season">Season leaderboard</button>
     <button role="tab" data-view="last" id="tab-last">Previous season</button>
+    <button role="tab" data-view="highlights" id="tab-highlights">Season highlights</button>
   </nav>
 
   <div class="section-head"><h2 id="sec-title"></h2><span class="refresh" id="sec-refresh"></span></div>
@@ -241,6 +297,7 @@ footer a { color: var(--ink-2); }
     <label class="search"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"></label>
   </div>
   <div class="table-box"><table id="table"><thead></thead><tbody></tbody></table></div>
+  <div class="hl" id="highlights" hidden></div>
 </main>
 
 <footer class="wrap">
@@ -475,6 +532,13 @@ footer a { color: var(--ink-2); }
       cols: [base[0], { ...base[1], cell: nameWithDays('current') }, base[2], { key: 'score', label: 'Total Activity (Damage)', get: (x) => seasonOf(x).score, cell: (x) => scoreCell(seasonOf(x).score, seasonOf(x).dmg) }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower), foughtCol('current')],
       def: 'score', medals: true,
     },
+    highlights: {
+      title: () => `Season ${data.latest.season.number} Highlights`,
+      refresh: 'Refreshes every ~15 minutes',
+      counting: () => `Counting from ${data.latest.season.countingFrom} 00:00 UTC` + (excluded.size ? ` · ${excluded.size} day${excluded.size === 1 ? '' : 's'} excluded` : ''),
+      extra: () => '',
+      rows: () => [], cols: [{ key: 'none', label: '', get: () => 0, cell: () => '' }], def: 'none',
+    },
     last: {
       title: () => data.prev ? `Season ${data.prev.season} Final Leaderboard` : 'Previous Season Leaderboard',
       refresh: 'Updates at season rollover',
@@ -486,6 +550,43 @@ footer a { color: var(--ink-2); }
     },
   };
 
+  // ---------- season highlights ----------
+  const fmtDateY = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  function band(cls, emoji, title, subtitle, total, list, valueOf) {
+    const MED = ['🥇', '🥈', '🥉'], PL = ['1ST', '2ND', '3RD'];
+    const pod = (i) => {
+      const x = list[i];
+      if (!x) return `<div class="pod p${i + 1} empty"><div class="medal-big">${MED[i]}</div><div class="val">—</div><div class="step">${PL[i]}</div></div>`;
+      return `<div class="pod p${i + 1}"><div class="medal-big">${MED[i]}</div><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>${rankCell(x.rank)}<div class="val">${valueOf(x)}</div><div class="step">${PL[i]}</div></div>`;
+    };
+    const rest = list.slice(3).map((x, k) => `<div class="row"><span><span class="p">${k + 4}.</span><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button></span><b>${valueOf(x)}</b></div>`).join('');
+    return `<section class="hl-band ${cls}">
+      <div class="hl-intro"><div class="hl-emoji" aria-hidden="true">${emoji}</div><h3>${title}</h3><p>${subtitle}</p><p class="total">${total}</p></div>
+      <div class="podium">${pod(1)}${pod(0)}${pod(2)}</div>
+      <div class="hl-rest">${rest ? `<div class="lbl">ALSO IN THE TOP 5</div>${rest}` : ''}</div>
+    </section>`;
+  }
+  function highlightsHTML() {
+    const M = data.latest.members, minP = adjMinT() * 1e12;
+    const top5 = (arr, key) => arr.map((x) => [x, key(x)]).filter(([, v]) => v != null && v > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([x]) => x);
+    const dmgTotal = M.reduce((t, x) => t + seasonOf(x).dmg, 0);
+    const growTotal = M.reduce((t, x) => t + (growth(x) || 0), 0);
+    let html = band('hl-dmg', '💥', 'Total damage', 'Most PvP damage this season', `Alliance total: ${fmtT(dmgTotal)}`,
+      top5(M, (x) => seasonOf(x).dmg), (x) => fmtT(seasonOf(x).dmg));
+    html += band('hl-grow', '📈', 'Overall growth', 'Largest max power gained this season', `Alliance gained ${fmtGrowth(growTotal)}T`,
+      top5(M, growth), (x) => fmtGrowth(growth(x)) + 'T');
+    html += band('hl-champ', '⚔️', 'Fight like a champ', 'Highest PvP rating this season (damage ÷ max power)', `Accounts under ${adjMinT()}T max power are left out`,
+      top5(M.filter((x) => x.maxPower >= minP), (x) => seasonOf(x).score), (x) => fmtScore(seasonOf(x).score));
+    const W = data.latest.wins;
+    if (Array.isArray(W)) {
+      const chips = W.map((w, i) => `<div class="win${i === 0 ? ' latest' : ''}"><span aria-hidden="true">🏆</span><span><b>Season ${w.season}</b><small>${fmtDateY(w.date)}</small></span></div>`).join('');
+      html += `<section class="hl-wins"><div class="hl-wins-head"><div><div class="hl-emoji" aria-hidden="true">🏆</div><div><h3>BL VICTORIES</h3><p>Every season 5HP has won</p></div></div>
+        <div class="hl-count"><b>${W.length}</b><span>season win${W.length === 1 ? '' : 's'}</span></div></div>
+        <div class="wins">${chips || '<p class="note">No wins recorded yet.</p>'}</div></section>`;
+    }
+    return html;
+  }
+
   function render() {
     if (!data.latest) return;
     const V = VIEWS[view];
@@ -494,6 +595,11 @@ footer a { color: var(--ink-2); }
     $('#sec-refresh').textContent = V.refresh;
     $('#sec-counting').innerHTML = V.counting();
     $('#sec-extra').innerHTML = V.extra();
+    const hl = view === 'highlights';
+    document.querySelector('.controls').hidden = hl;
+    document.querySelector('.table-box').hidden = hl;
+    $('#highlights').hidden = !hl;
+    if (hl) { $('#highlights').innerHTML = highlightsHTML(); return; }
     const sort = sorts[view] || { key: V.def, dir: -1 };
     const col = V.cols.find((c) => c.key === sort.key) || V.cols[0];
     let rows = V.rows().filter((x) => !x.rank || ranks.has(x.rank));
@@ -607,6 +713,7 @@ footer a { color: var(--ink-2); }
     syncChips(); store.set('ranks', [...ranks]); render();
   });
   $('#q').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
+  $('#highlights').addEventListener('click', (e) => { const n = e.target.closest('.name-btn'); if (n) openPlayer(n.dataset.id); });
   $('#table').addEventListener('click', (e) => {
     const s = e.target.closest('button[data-sort]');
     if (s) {
