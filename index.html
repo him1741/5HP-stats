@@ -53,7 +53,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .goog-te-gadget > span { display: none; }
 
 /* Season heading */
-.head { padding-block: 26px 6px; }
+.head { padding-block: 22px 0; }
 .head h1 { margin: 0; font-size: clamp(26px, 5vw, 32px); font-weight: 700; line-height: 1.15; text-wrap: balance; }
 .head h1 small { font-size: 17px; font-weight: 400; color: var(--ink-2); margin-left: 10px; white-space: nowrap; }
 .meta { margin-top: 6px; color: var(--muted); font-size: 14.5px; display: flex; flex-wrap: wrap; gap: 4px 16px; }
@@ -66,7 +66,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .show > span { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
 .chip { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; min-width: 50px; padding: 5px 12px; font: 600 15px/1.2 var(--font); cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--chip); border-color: var(--chip-line); color: var(--chip-ink); }
-.tabs { display: flex; flex-wrap: wrap; gap: 4px 28px; margin-top: 22px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 22px; border-bottom: 1px solid var(--line); }
 .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 10px 2px; font: 600 15px/1.2 var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--violet); cursor: pointer; }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--violet-strong); }
@@ -260,8 +260,15 @@ footer a { color: var(--ink-2); }
   .win { font-size: 16px; padding: 8px 12px; }
 }
 /* Alliance stats panel */
-.astats { margin-top: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; display: flex; flex-wrap: wrap; gap: 20px 36px; align-items: center; }
+.astats { margin-top: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; display: flex; flex-wrap: wrap; gap: 20px 36px; align-items: center; }
 .as-main { flex: 1 1 340px; min-width: 0; }
+.as-top { flex: 1 1 100%; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 6px 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.as-eyebrow { font-size: 12.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--violet); }
+.as-top h1 { margin: 6px 0 0; font-size: clamp(26px, 5vw, 32px); font-weight: 700; line-height: 1.15; }
+.as-top h1 small { font-size: 17px; font-weight: 400; color: var(--ink-2); margin-left: 10px; white-space: nowrap; }
+.as-updated { color: var(--muted); font-size: 14px; }
+.as-updated b { color: var(--ink-2); font-weight: 600; }
+.as-updated span { margin-left: 6px; }
 .astats h3 { margin: 0; font-size: 15px; letter-spacing: .1em; color: var(--violet); }
 .as-label { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--muted); }
 .as-big { font-size: 38px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -297,8 +304,7 @@ footer a { color: var(--ink-2); }
 
 <main class="wrap">
   <section class="head">
-    <h1><span id="season-name">Season —</span><small id="season-week"></small></h1>
-    <div class="meta"><span id="updated">Loading…</span><span id="alliance-line"></span></div>
+    <div id="astats-box"><p class="meta" id="updated">Loading…</p></div>
     <div class="demo" id="demo-banner" hidden>Preview: the roster is real (pulled Oct 22). Daily and season damage are simulated so you can see how the tables fill in once tracking runs.</div>
   </section>
 
@@ -392,10 +398,6 @@ footer a { color: var(--ink-2); }
     $('#brand-tag').textContent = A.tag;
     $('#brand-sub').textContent = `Stats · KG ${A.server}`;
     document.title = `${A.tag} Alliance Stats`;
-    $('#season-name').textContent = `Season ${S.number ?? '—'}`;
-    $('#season-week').textContent = S.week == null ? '' : (S.week === 0 ? `Rest week · Day ${S.day}` : `Week ${S.week} · Day ${S.day}`);
-    $('#updated').innerHTML = `Last updated: <b>${utcStamp(L.fetchedAt)}</b> (${ago(L.fetchedAt)})`;
-    $('#alliance-line').textContent = `[${A.tag}] ${A.name} · ${A.members}${A.maxMembers ? '/' + A.maxMembers : ''} members · ${compact(A.power)} power`;
     $('#demo-banner').hidden = !L.demo;
   }
 
@@ -569,7 +571,7 @@ footer a { color: var(--ink-2); }
         const S = data.latest.season;
         return `Counting from ${S.countingFrom} 00:00 UTC` + (S.partial ? ` · tracking started part-way through this season` : '') + (excluded.size ? ` · ${excluded.size} day${excluded.size === 1 ? '' : 's'} excluded` : '');
       },
-      extra: () => statsPanel() + calendar(),
+      extra: () => calendar(),
       after: formulaBox,
       rows: () => data.latest.members.filter((x) => !isAlt(x) || seasonOf(x).dmg > 0),
       cols: [base[0], { ...base[1], cell: nameWithDays('current') }, base[2], { key: 'score', label: 'Total Activity', get: (x) => seasonOf(x).score, cell: (x) => `<b>${fmtScore(seasonOf(x).score)}</b>` }, { key: 'dmg', label: 'Damage', get: (x) => seasonOf(x).dmg, cell: (x) => `<span class="dmg-cell">${fmtT(seasonOf(x).dmg)}</span>` }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower), foughtCol('current')],
@@ -608,10 +610,18 @@ footer a { color: var(--ink-2); }
     const avg = (arr) => arr.length ? sum(arr, (x) => x.maxPower) / arr.length : 0;
     const T = (v, dp = 1) => (v / 1e12).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }) + 'T';
     const item = (label, value, sub) => `<div class="as-item"><div class="as-label">${label}</div><div class="as-row"><span class="as-val">${value}</span><span class="as-sub">${sub}</span></div></div>`;
-    return `<section class="astats" aria-label="Alliance stats">
+    const S = L.season;
+    const week = S.week == null ? '' : (S.week === 0 ? `Rest week · Day ${S.day}` : `Week ${S.week} · Day ${S.day}`);
+    return `<section class="astats" aria-label="Season and alliance stats">
+      <div class="as-top">
+        <div>
+          <div class="as-eyebrow">[${esc(A.tag)}] ${esc(A.name)} · Alliance stats</div>
+          <h1>Season ${S.number ?? '—'}${week ? `<small>${week}</small>` : ''}</h1>
+        </div>
+        <div class="as-updated">Last updated: <b>${utcStamp(L.fetchedAt)}</b><span>(${ago(L.fetchedAt)})</span></div>
+      </div>
       <div class="as-main">
-        <h3>ALLIANCE STATS</h3>
-        <div class="as-label" style="margin-top:14px">ALLIANCE POWER</div>
+        <div class="as-label">ALLIANCE POWER</div>
         <div class="as-big">${T(nowP)}</div>
         <div class="as-bar" aria-hidden="true"><span style="width:${startW.toFixed(1)}%"></span><span class="gain" style="width:${(100 - startW).toFixed(1)}%"></span></div>
         <div class="as-bar-labels"><span>Season start ${T(startP)}</span><span class="up">${gain >= 0 ? '+' : '−'}${T(Math.abs(gain))} (${gain >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%)</span></div>
@@ -668,6 +678,7 @@ footer a { color: var(--ink-2); }
     if (!data.latest) return;
     const V = VIEWS[view];
     document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === view));
+    $('#astats-box').innerHTML = statsPanel();
     $('#sec-title').textContent = V.title();
     $('#sec-refresh').textContent = V.refresh;
     $('#sec-counting').innerHTML = V.counting();
