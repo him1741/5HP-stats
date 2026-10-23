@@ -82,7 +82,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .formula code { display: block; font: 600 16px/1.4 var(--mono); color: var(--cyan); margin-bottom: 6px; }
 .formula p { margin: 0; color: var(--ink-2); font-size: 15px; }
 .formula code.second { margin-top: 14px; }
+.ctl-right { display: flex; align-items: center; gap: 8px; flex: 1 1 260px; max-width: 370px; justify-content: flex-end; }
 .search { display: block; flex: 1 1 220px; max-width: 320px; }
+.export { position: relative; flex: none; }
+.export-btn { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); color: var(--chip-ink); cursor: pointer; }
+.export-btn:hover, .export-btn[aria-expanded="true"] { border-color: var(--chip-line); background: var(--chip); }
+.export-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 15; width: 260px; background: var(--panel); border: 1px solid var(--chip-line); border-radius: 10px; padding: 8px; box-shadow: 0 10px 30px rgb(0 0 0 / .45); }
+.em-title { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--violet); padding: 4px 8px 6px; text-transform: uppercase; }
+.export-menu button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; color: var(--ink); }
+.export-menu button small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.export-menu button:hover, .export-menu button:focus-visible { background: var(--panel-2); }
 .search input { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; font: 16px var(--font); }
 .search input::placeholder { color: var(--muted); }
 
@@ -413,7 +422,19 @@ footer a { color: var(--ink-2); }
       <button class="chip" data-rank="R2" aria-pressed="true">R2</button>
       <button class="chip" data-rank="R1" aria-pressed="true">R1</button>
     </div>
-    <label class="search"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"></label>
+    <div class="ctl-right">
+      <label class="search"><input id="q" type="search" placeholder="Find a player" aria-label="Find a player"></label>
+      <div class="export">
+        <button class="export-btn" id="export-btn" aria-label="Export CSV" aria-haspopup="true" aria-expanded="false" title="Export CSV">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M5 21h14"></path></svg>
+        </button>
+        <div class="export-menu" id="export-menu" role="menu" hidden>
+          <div class="em-title">Export CSV</div>
+          <button role="menuitem" data-export="view">This view<small>The table as shown, with your filters, search and sort</small></button>
+          <button role="menuitem" data-export="all">All player data<small>Every member with all stats</small></button>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="table-box"><table id="table"><thead></thead><tbody></tbody></table></div>
   <div class="hl" id="highlights" hidden></div>
@@ -914,6 +935,70 @@ footer a { color: var(--ink-2); }
     return html;
   }
 
+  // The rows a table view shows: rank filters, search, then sort (ties by power).
+  function viewRows(V, col, sort) {
+    let rows = V.rows().filter((x) => !x.rank || ranks.has(x.rank));
+    if (query) rows = rows.filter((x) => x.name.toLowerCase().includes(query));
+    return [...rows].sort((a, b) => { const A = col.get(a), B = col.get(b); return (A > B ? 1 : A < B ? -1 : 0) * sort.dir || (b.power || 0) - (a.power || 0); });
+  }
+
+  // ---------- CSV export ----------
+  const r2 = (v, dp = 2) => (v == null || !isFinite(v) ? '' : Number(v.toFixed(dp)));
+  const tT = (v, dp = 2) => (v == null ? '' : r2(v / 1e12, dp));
+  function csvCell(v) {
+    if (v == null) return '';
+    let t = String(v);
+    if (typeof v === 'string' && /^[=+\-@]/.test(t)) t = "'" + t;            // keep spreadsheets from reading names as formulas
+    return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }
+  function downloadCSV(name, header, rows) {
+    const text = '﻿' + [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');   // BOM so Excel reads names correctly
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  const fileBase = () => `${data.latest.alliance.tag}_S${data.latest.season.number}`;
+  function exportView() {
+    const V = VIEWS[view];
+    if (!V || view === 'highlights' || view === 'calendar') return exportAll();
+    const sort = sorts[view] || { key: V.def, dir: V.defDir || -1 };
+    const col = V.cols.find((c) => c.key === sort.key) || V.cols[0];
+    const rows = viewRows(V, col, sort);
+    const which = view === 'last' ? 'prev' : 'current';
+    const ofN = rows.length && V.cols.some((c) => c.key === 'days') ? fought(rows[0], which).of : '';
+    const head = (c) => ({ rank: 'Rank', name: 'Player', power: 'Power (T)', growth: 'Growth this season (T)', seen: 'Last online (days ago)', dmg: 'Damage (T)', days: `Days fought (of ${ofN})` }[c.key] || c.label);
+    const val = (c, x) => {
+      switch (c.key) {
+        case 'rank': return x.rank;
+        case 'name': return x.name;
+        case 'power': return tT(x.power);
+        case 'growth': return r2(growth(x));
+        case 'seen': return x.daysOffline;
+        case 'dmg': return tT(c.get(x), 1);
+        case 'adj': { const v = c.get(x); return v < 0 ? '' : r2(v); }
+        case 'days': return c.get(x);
+        default: return r2(c.get(x));
+      }
+    };
+    const label = { roster: 'alliance-members', daily: dailyDate ? 'daily-pvp_' + dailyDate : 'daily-pvp_' + data.latest.gameDay, season: 'season-leaderboard', last: 'previous-season_S' + (data.prev?.season ?? '') }[view] || view;
+    downloadCSV(`${fileBase()}_${label}_${data.latest.gameDay}.csv`, ['#', ...V.cols.map(head)], rows.map((x, i) => [i + 1, ...V.cols.map((c) => val(c, x))]));
+  }
+  function exportAll() {
+    const L = data.latest;
+    const order = (x) => RANKS.indexOf(x.rank);
+    const rows = [...L.members].sort((a, b) => order(a) - order(b) || b.power - a.power);
+    const header = ['Player', 'ID', 'Rank', 'Alt (R1)', 'Level', 'Power (T)', 'Max power (T)', 'Growth this season (T)', 'Last online', 'Days since online',
+      'Damage today (T)', 'Activity today', 'Season damage (T)', 'Season activity', 'Season adjusted', `Days fought (of ${L.season.dayNumber ?? ''})`,
+      'PvP total, last 3 seasons (T)', 'Tracked since'];
+    downloadCSV(`${fileBase()}_all-player-data_${L.gameDay}.csv`, header, rows.map((x) => {
+      const sd = seasonOf(x);
+      return [x.name, x.id, x.rank, isAlt(x) ? 'yes' : 'no', x.level, tT(x.power), tT(x.maxPower), r2(growth(x)), x.lastOnline, x.daysOffline,
+        tT(x.dailyDmg, 1), r2(x.dailyScore), tT(sd.dmg, 1), r2(sd.score), r2(adjusted(sd.dmg, x.maxPower, x.rank)), fought(x).n,
+        tT(Number(x.pvp), 1), x.firstSeen];
+    }));
+  }
+
   function render() {
     if (!data.latest) return;
     const V = VIEWS[view];
@@ -933,9 +1018,7 @@ footer a { color: var(--ink-2); }
     if (cal) { $('#calendar').innerHTML = calendarHTML(); return; }
     const sort = sorts[view] || { key: V.def, dir: V.defDir || -1 };
     const col = V.cols.find((c) => c.key === sort.key) || V.cols[0];
-    let rows = V.rows().filter((x) => !x.rank || ranks.has(x.rank));
-    if (query) rows = rows.filter((x) => x.name.toLowerCase().includes(query));
-    rows = [...rows].sort((a, b) => { const A = col.get(a), B = col.get(b); return (A > B ? 1 : A < B ? -1 : 0) * sort.dir || (b.power || 0) - (a.power || 0); });
+    let rows = viewRows(V, col, sort);
     $('#table').dataset.view = view;
     $('#table thead').innerHTML = '<tr><th>#</th>' + V.cols.map((c) => {
       const s = c.key === col.key ? (sort.dir < 0 ? 'descending' : 'ascending') : 'none';
@@ -1043,6 +1126,21 @@ footer a { color: var(--ink-2); }
     if (!ranks.size) RANKS.forEach((x) => ranks.add(x));
     syncChips(); store.set('ranks', [...ranks]); render();
   });
+  const exportMenu = $('#export-menu'), exportBtn = $('#export-btn');
+  const closeExport = () => { exportMenu.hidden = true; exportBtn.setAttribute('aria-expanded', 'false'); };
+  exportBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = exportMenu.hidden;
+    exportMenu.hidden = !open; exportBtn.setAttribute('aria-expanded', String(open));
+    if (open) exportMenu.querySelector('button').focus();
+  });
+  exportMenu.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-export]'); if (!b) return;
+    closeExport();
+    b.dataset.export === 'all' ? exportAll() : exportView();
+  });
+  document.addEventListener('click', (e) => { if (!exportMenu.hidden && !e.target.closest('.export')) closeExport(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !exportMenu.hidden) { closeExport(); exportBtn.focus(); } });
   $('#q').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
   $('#highlights').addEventListener('click', (e) => { const n = e.target.closest('.name-btn'); if (n) openPlayer(n.dataset.id); });
   $('#sec-extra').addEventListener('click', (e) => {
