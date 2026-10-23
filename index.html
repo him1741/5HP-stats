@@ -129,7 +129,7 @@ tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
 .rank.R1 { background: var(--r1-bg); color: var(--r1); }
 .name-btn { all: unset; cursor: pointer; font-weight: 500; }
 .days-mini, .seen-mini { display: none; }
-.growth, .days-cell { font-variant-numeric: tabular-nums; }
+.growth, .days-cell, .dmg-cell { font-variant-numeric: tabular-nums; }
 .weeks { display: grid; gap: 10px; margin-top: 4px; }
 .wk { display: grid; grid-template-columns: 84px minmax(0, 1fr) 118px; align-items: center; gap: 12px; font-size: 14.5px; }
 .wk > span:first-child { color: var(--ink-2); }
@@ -147,6 +147,11 @@ tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
 .dmg { color: var(--muted); margin-left: 6px; }
 .seen-ok { color: var(--r3); } .seen-warn { color: #f0b45a; } .seen-bad { color: #ff8a80; }
 .empty { padding: 30px 16px; text-align: center; color: var(--muted); white-space: normal; }
+@media (max-width: 440px) {
+  #table[data-view="season"] th { font-size: 10px; letter-spacing: 0; }
+  #table[data-view="season"] .dmg-cell { font-size: 13px; }
+  #table[data-view="season"] .name-btn, #table[data-view="last"] .name-btn { display: inline-block; max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+}
 @media (max-width: 400px) {
   .table-box th, .table-box td { padding: 10px 4px; }
   .table-box th:first-child, .table-box td:first-child { padding-left: 9px; }
@@ -171,7 +176,7 @@ tr.bronze .name-btn, tr.bronze .pw { color: var(--bronze); }
   .pos .medal + .n { display: none; }
   th:nth-child(2), td:nth-child(2) { display: none; }
   #table:not([data-view="roster"]) th:nth-child(4), #table:not([data-view="roster"]) td:nth-child(4) { display: none; }
-  #table[data-view="season"] th:nth-child(7), #table[data-view="season"] td:nth-child(7), #table[data-view="last"] th:nth-child(7), #table[data-view="last"] td:nth-child(7) { display: none; }
+  #table[data-view="season"] th:nth-child(8), #table[data-view="season"] td:nth-child(8), #table[data-view="last"] th:nth-child(7), #table[data-view="last"] td:nth-child(7) { display: none; }
   #table[data-view="season"] .days-mini, #table[data-view="last"] .days-mini, #table[data-view="roster"] .seen-mini { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
   #table[data-view="roster"] th:nth-child(6), #table[data-view="roster"] td:nth-child(6) { display: none; }
   .rank.mini { display: inline-block; min-width: 0; font-size: 11px; padding: 3px 4px; margin-right: 6px; vertical-align: 1px; }
@@ -493,7 +498,7 @@ footer a { color: var(--ink-2); }
   }
   const foughtTxt = (f) => `${f.n}/${f.of}`;
   const foughtCol = (which) => ({ key: 'days', label: 'Days fought', get: (x) => fought(x, which).n, cell: (x) => `<span class="days-cell">${foughtTxt(fought(x, which))}</span>` });
-  const nameWithDays = (which) => (x) => nameCell(x) + `<span class="days-mini">${foughtTxt(fought(x, which))} days fought</span>`;
+  const nameWithDays = (which) => (x) => nameCell(x) + `<span class="days-mini">${foughtTxt(fought(x, which))} days</span>`;
   // max power gained since the season started (T); null if unknown
   function growth(x) {
     const S = data.latest.season, h = histOf(x.id), days = data.history?.days || [];
@@ -567,7 +572,7 @@ footer a { color: var(--ink-2); }
       extra: () => statsPanel() + calendar(),
       after: formulaBox,
       rows: () => data.latest.members.filter((x) => !isAlt(x) || seasonOf(x).dmg > 0),
-      cols: [base[0], { ...base[1], cell: nameWithDays('current') }, base[2], { key: 'score', label: 'Total Activity (Damage)', get: (x) => seasonOf(x).score, cell: (x) => scoreCell(seasonOf(x).score, seasonOf(x).dmg) }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower), foughtCol('current')],
+      cols: [base[0], { ...base[1], cell: nameWithDays('current') }, base[2], { key: 'score', label: 'Total Activity', get: (x) => seasonOf(x).score, cell: (x) => `<b>${fmtScore(seasonOf(x).score)}</b>` }, { key: 'dmg', label: 'Damage', get: (x) => seasonOf(x).dmg, cell: (x) => `<span class="dmg-cell">${fmtT(seasonOf(x).dmg)}</span>` }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower), foughtCol('current')],
       def: 'score', medals: true,
     },
     highlights: {
@@ -683,7 +688,7 @@ footer a { color: var(--ink-2); }
       const s = c.key === col.key ? (sort.dir < 0 ? 'descending' : 'ascending') : 'none';
       return `<th aria-sort="${s}"><button data-sort="${c.key}">${c.label}</button></th>`;
     }).join('') + '</tr>';
-    const podium = V.medals && (col.key === 'score' || col.key === 'adj') && sort.dir < 0 && !query;
+    const podium = V.medals && (col.key === 'score' || col.key === 'adj' || col.key === 'dmg') && sort.dir < 0 && !query;
     const MED = ['🥇', '🥈', '🥉'], CLS = ['gold', 'silver', 'bronze'];
     $('#table tbody').innerHTML = rows.length ? rows.map((x, i) => {
       const top = podium && i < 3 && col.get(x) > 0;

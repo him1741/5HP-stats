@@ -8,7 +8,7 @@
   "adjustedExponent": 1.45,
   "adjustedRecalcDay": 8,
   "adjustedExcludeRanks": ["R1"],
-  "adjustedMinPowerT": 1,
+  "adjustedMinPowerT": 5,
   "inactiveDays": 3,
   "historyDays": 180
 }
