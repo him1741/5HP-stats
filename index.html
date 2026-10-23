@@ -254,6 +254,30 @@ footer a { color: var(--ink-2); }
   .pod.p1 .step { height: 104px; } .pod.p2 .step { height: 80px; } .pod.p3 .step { height: 62px; }
   .win { font-size: 16px; padding: 8px 12px; }
 }
+/* Alliance stats panel */
+.astats { margin-top: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; display: flex; flex-wrap: wrap; gap: 20px 36px; align-items: center; }
+.as-main { flex: 1 1 340px; min-width: 0; }
+.astats h3 { margin: 0; font-size: 15px; letter-spacing: .1em; color: var(--violet); }
+.as-label { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--muted); }
+.as-big { font-size: 38px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.as-bar { margin-top: 12px; height: 10px; border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; display: flex; }
+.as-bar span { display: block; height: 100%; background: var(--chip-line); }
+.as-bar span.gain { background: var(--r3); }
+.as-bar-labels { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font-size: 13px; color: var(--muted); }
+.as-bar-labels .up { color: var(--r3); font-weight: 600; }
+.as-list { flex: 1 1 380px; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+.as-item { padding: 10px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.as-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.as-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.as-sub { font-size: 12.5px; color: var(--muted); }
+/* Score explanation under the tables */
+.howto { margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.howto summary { cursor: pointer; color: var(--violet); font-weight: 600; width: max-content; max-width: 100%; }
+.howto-body { margin-top: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; }
+.howto-body p { margin: 0 0 6px; }
+.howto-body p:last-child { margin-bottom: 0; }
+.howto-body b { color: var(--ink-2); font-weight: 600; }
+@media (max-width: 560px) { .astats { padding: 16px; } .as-big { font-size: 30px; } .as-list { gap: 0 16px; } .as-val { font-size: 17px; } }
 </style>
 <!--ARTIFACT-HEAD-END-->
 </head>
@@ -298,6 +322,7 @@ footer a { color: var(--ink-2); }
   </div>
   <div class="table-box"><table id="table"><thead></thead><tbody></tbody></table></div>
   <div class="hl" id="highlights" hidden></div>
+  <div id="sec-after"></div>
 </main>
 
 <footer class="wrap">
@@ -388,7 +413,10 @@ footer a { color: var(--ink-2); }
   };
   const adjCol = (dmgOf, maxOf) => ({ key: 'adj', label: 'Adjusted', get: (x) => adjusted(dmgOf(x), maxOf(x)) ?? -1, cell: (x) => `<b>${fmtAdj(adjusted(dmgOf(x), maxOf(x)))}</b>` });
   const seen = (d) => d == null ? '—' : d === 0 ? '<span class="seen-ok">Today</span>' : d < 3 ? `<span class="seen-ok">${d}d ago</span>` : d < 7 ? `<span class="seen-warn">${d}d ago</span>` : `<span class="seen-bad">${d}d ago</span>`;
-  const formulaBox = () => `<div class="formula"><code>Activity = PvP Damage ÷ Max Power</code><p>The same activity score the game and KG Companion use: a higher score means more fighting for the account's size. Damage is shown in brackets.</p><code class="second">Adjusted = PvP Damage ÷ Max Power<sup>${adjExp()}</sup></code><p>In this alliance, bigger accounts deal more than proportionally more damage, so even Activity ranks big accounts higher. Dividing by max power to the ${adjExp()} instead removes that: the exponent is the value at which account size has no overall effect on the score, measured from our own players' damage and power. Big and small accounts then spread evenly through the rankings, and what's left is how hard each player fought for their size. Accounts under ${adjMinT()}T max power show — and aren't ranked by Adjusted: at that size the formula would lift them to the top on very small totals. ${adjNote()} Both use damage and max power in T. Click a column heading to sort by it.</p></div>`;
+  const formulaBox = () => `<details class="howto"><summary>How the scores work</summary><div class="howto-body">
+    <p><b>Activity</b> = PvP damage ÷ max power. The same score the game and KG Companion use: a higher score means more fighting for the account's size.</p>
+    <p><b>Adjusted</b> = PvP damage ÷ max power<sup>${adjExp()}</sup>. In this alliance bigger accounts deal more than proportionally more damage, so even Activity ranks them higher. Using the ${adjExp()} power instead removes that edge, so big and small accounts spread evenly through the rankings and what's left is how hard each player fought for their size. ${adjNote()} Accounts under ${adjMinT()}T max power show — and aren't ranked by Adjusted.</p>
+    <p>Damage is shown in brackets. Damage and power are in T. Click a column heading to sort by it.</p></div></details>`;
 
   // ---------- excluded days (this browser only) ----------
   // Tap a counted day in the calendar to leave it out of the season totals. Per-day damage comes from history.json
@@ -515,7 +543,8 @@ footer a { color: var(--ink-2); }
       title: () => 'Daily PvP',
       refresh: 'Refreshes every ~15 minutes',
       counting: () => `Counting from ${data.latest.gameDay} 00:00 UTC`,
-      extra: formulaBox,
+      extra: () => '',
+      after: formulaBox,
       rows: () => data.latest.members,
       cols: [...base, { key: 'score', label: 'Activity (Damage)', get: (x) => x.dailyScore, cell: (x) => scoreCell(x.dailyScore, x.dailyDmg) }, adjCol((x) => x.dailyDmg, (x) => x.maxPower)],
       def: 'score', medals: true,
@@ -527,7 +556,8 @@ footer a { color: var(--ink-2); }
         const S = data.latest.season;
         return `Counting from ${S.countingFrom} 00:00 UTC` + (S.partial ? ` · tracking started part-way through this season` : '') + (excluded.size ? ` · ${excluded.size} day${excluded.size === 1 ? '' : 's'} excluded` : '');
       },
-      extra: () => formulaBox() + calendar(),
+      extra: () => statsPanel() + calendar(),
+      after: formulaBox,
       rows: () => data.latest.members,
       cols: [base[0], { ...base[1], cell: nameWithDays('current') }, base[2], { key: 'score', label: 'Total Activity (Damage)', get: (x) => seasonOf(x).score, cell: (x) => scoreCell(seasonOf(x).score, seasonOf(x).dmg) }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower), foughtCol('current')],
       def: 'score', medals: true,
@@ -543,12 +573,47 @@ footer a { color: var(--ink-2); }
       title: () => data.prev ? `Season ${data.prev.season} Final Leaderboard` : 'Previous Season Leaderboard',
       refresh: 'Updates at season rollover',
       counting: () => data.prev ? `Counted ${data.prev.from} to ${data.prev.to}` : 'This fills in automatically when the current season ends.',
-      extra: () => data.prev ? formulaBox() : '',
+      extra: () => '',
+      after: () => data.prev ? formulaBox() : '',
       rows: () => data.prev?.rows || [],
       cols: [base[0], { ...base[1], cell: nameWithDays('prev') }, base[2], { key: 'score', label: 'Total Activity (Damage)', get: (x) => x.score, cell: (x) => scoreCell(x.score, x.dmg) }, adjCol((x) => x.dmg, (x) => x.maxPower ?? x.power), foughtCol('prev')],
       def: 'score', medals: true,
     },
   };
+
+  // ---------- alliance stats (Season leaderboard) ----------
+  // Alts = every R1 account.
+  function statsPanel() {
+    const L = data.latest, M = L.members, A = L.alliance, X = L.allianceStats || {};
+    const isAlt = (x) => x.rank === 'R1';
+    const alts = M.filter(isAlt), mains = M.filter((x) => !isAlt(x));
+    const sum = (arr, f) => arr.reduce((t, x) => t + (f(x) || 0), 0);
+    const nowP = sum(M, (x) => x.maxPower);
+    const startP = X.startPower || (nowP - sum(M, (x) => (growth(x) || 0) * 1e12));
+    const gain = nowP - startP, pct = startP > 0 ? gain / startP * 100 : 0;
+    const startW = nowP > 0 ? Math.max(0, Math.min(100, startP / nowP * 100)) : 100;
+    const dmg = sum(M, (x) => seasonOf(x).dmg), fighters = M.filter((x) => seasonOf(x).dmg > 0).length;
+    const avg = (arr) => arr.length ? sum(arr, (x) => x.maxPower) / arr.length : 0;
+    const T = (v, dp = 1) => (v / 1e12).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }) + 'T';
+    const item = (label, value, sub) => `<div class="as-item"><div class="as-label">${label}</div><div class="as-row"><span class="as-val">${value}</span><span class="as-sub">${sub}</span></div></div>`;
+    return `<section class="astats" aria-label="Alliance stats">
+      <div class="as-main">
+        <h3>ALLIANCE STATS</h3>
+        <div class="as-label" style="margin-top:14px">ALLIANCE POWER</div>
+        <div class="as-big">${T(nowP)}</div>
+        <div class="as-bar" aria-hidden="true"><span style="width:${startW.toFixed(1)}%"></span><span class="gain" style="width:${(100 - startW).toFixed(1)}%"></span></div>
+        <div class="as-bar-labels"><span>Season start ${T(startP)}</span><span class="up">${gain >= 0 ? '+' : '−'}${T(Math.abs(gain))} (${gain >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%)</span></div>
+      </div>
+      <div class="as-list">
+        ${item('SEASON DAMAGE', T(dmg), `${fighters} of ${M.length} dealt damage`)}
+        ${item('AVERAGE POWER', T(avg(mains)), `main accounts (${T(avg(M))} with alts)`)}
+        ${item('MEMBERS', `${A.members}${A.maxMembers ? ' / ' + A.maxMembers : ''}`, 'slots filled')}
+        ${X.activePlayers != null ? item('ACTIVE PLAYERS', `${X.activePlayers} / ${X.countPlayers ?? A.members}`, 'per KG Companion') : ''}
+        ${item('ALTS', String(alts.length), `all R1 · ${T(sum(alts, (x) => x.maxPower))}`)}
+        ${X.pvpRate != null ? item('ALLIANCE PVP INDEX', X.pvpRate.toLocaleString('en-US', { maximumFractionDigits: 2 }), 'lifetime') : ''}
+      </div>
+    </section>`;
+  }
 
   // ---------- season highlights ----------
   const fmtDateY = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
@@ -599,6 +664,7 @@ footer a { color: var(--ink-2); }
     document.querySelector('.controls').hidden = hl;
     document.querySelector('.table-box').hidden = hl;
     $('#highlights').hidden = !hl;
+    $('#sec-after').innerHTML = !hl && V.after ? V.after() : '';
     if (hl) { $('#highlights').innerHTML = highlightsHTML(); return; }
     const sort = sorts[view] || { key: V.def, dir: -1 };
     const col = V.cols.find((c) => c.key === sort.key) || V.cols[0];

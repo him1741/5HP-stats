@@ -47,6 +47,7 @@ const round = (x, n = 2) => Math.round(x * 10 ** n) / 10 ** n;
 async function fetchText(url) {
   if (process.env.FIXTURE_ACTIVITY) {
     const u = new URL(url), s = u.searchParams.get('s');
+    if (u.pathname.endsWith('/compare')) return readFile(path.join(process.env.FIXTURE_ACTIVITY, 'compare.json'), 'utf8');
     if (u.pathname.endsWith('/kvk')) return readFile(path.join(process.env.FIXTURE_ACTIVITY, 'kvk.json'), 'utf8');
     return readFile(path.join(process.env.FIXTURE_ACTIVITY, `activity-${s || 'current'}.json`), 'utf8');
   }
@@ -352,6 +353,25 @@ if (dayNumber != null && dayNumber >= recalcDay && st.adjusted.season !== st.sea
   }
 }
 
+// Alliance-level figures from KG Companion's Compare factions page, for the
+// Alliance Stats box. Keeps the previous figures if it can't be reached.
+let allianceStats = prevLatest?.allianceStats ?? null;
+try {
+  const c = JSON.parse(await fetchText(`https://kg.dbapp.ru/api/compare?y=${config.allianceId}`));
+  const f = (c?.factions || []).find((x) => x.code === 'y') || c?.factions?.[0];
+  if (f && f.countPlayers) {
+    allianceStats = {
+      startPower: Number(f.startPower) || null,     // total max power when the season started
+      maxPower: Number(f.maxPower) || null,         // total max power now
+      activePlayers: f.activePlayers ?? null,
+      countPlayers: f.countPlayers ?? null,
+      pvpRate: f.pvpRate ?? null,                   // alliance-wide lifetime PvP index
+    };
+  }
+} catch (e) {
+  console.warn(`Alliance stats unavailable (${e.message}); keeping the previous figures.`);
+}
+
 // Season wins (BL victories) for the Season highlights tab, newest first.
 // Keeps the previous list if KG Companion can't be reached this run.
 let wins = prevLatest?.wins ?? null;
@@ -383,6 +403,7 @@ const latest = {
   scoreFormula: 'damage / maxPower',
   adjusted: { ...st.adjusted, recalcDay, minPowerT: adjMin / 1e12 },
   wins,
+  allianceStats,
   inactiveDays: config.inactiveDays ?? 3,
   members: rows,
 };
