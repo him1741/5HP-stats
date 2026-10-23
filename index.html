@@ -261,9 +261,9 @@ footer a { color: var(--ink-2); }
 }
 /* Alliance stats panel */
 .astats { margin-top: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 22px 18px; display: flex; flex-wrap: wrap; gap: 14px 36px; align-items: flex-start; }
-.as-list.as-under { margin-top: 10px; }
-.as-under .as-item:last-child, .as-under .as-item:nth-last-child(2) { border-bottom: 0; }
-.as-main { flex: 1 1 340px; min-width: 0; }
+.as-grid { flex: 1 1 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 24px; align-items: end; }
+.as-grid .as-main { grid-column: span 2; padding-bottom: 12px; }
+.as-main { min-width: 0; }
 .as-top { flex: 1 1 100%; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 4px 20px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .as-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--violet); }
 .as-top h1 { margin: 4px 0 0; font-size: 22px; font-weight: 700; line-height: 1.2; }
@@ -279,9 +279,10 @@ footer a { color: var(--ink-2); }
 .as-bar span.gain { background: var(--r3); }
 .as-bar-labels { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font-size: 13px; color: var(--muted); }
 .as-bar-labels .up { color: var(--r3); font-weight: 600; }
-.as-list { flex: 1 1 380px; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
-.as-item { padding: 10px 0; border-bottom: 1px solid var(--line); min-width: 0; }
-.as-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.as-item { padding: 10px 0; border-top: 1px solid var(--line); min-width: 0; align-self: stretch; }
+.as-item.r1 { border-top: 0; align-self: end; }
+.as-row { display: flex; flex-direction: column; }
+.as-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .as-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .as-sub { font-size: 12.5px; color: var(--muted); }
 /* Score explanation under the tables */
@@ -291,7 +292,8 @@ footer a { color: var(--ink-2); }
 .howto-body p { margin: 0 0 6px; }
 .howto-body p:last-child { margin-bottom: 0; }
 .howto-body b { color: var(--ink-2); font-weight: 600; }
-@media (max-width: 560px) { .astats { padding: 16px; } .as-big { font-size: 30px; } .as-list { gap: 0 16px; } .as-val { font-size: 17px; } }
+@media (max-width: 700px) { .as-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; } .as-item.r1 { border-top: 1px solid var(--line); } }
+@media (max-width: 560px) { .as-sub { white-space: normal; } .astats { padding: 16px; } .as-big { font-size: 30px; } .as-val { font-size: 17px; } }
 </style>
 <!--ARTIFACT-HEAD-END-->
 </head>
@@ -611,7 +613,7 @@ footer a { color: var(--ink-2); }
     const dmg = sum(M, (x) => seasonOf(x).dmg), fighters = M.filter((x) => seasonOf(x).dmg > 0).length;
     const avg = (arr) => arr.length ? sum(arr, (x) => x.maxPower) / arr.length : 0;
     const T = (v, dp = 1) => (v / 1e12).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }) + 'T';
-    const item = (label, value, sub) => `<div class="as-item"><div class="as-label">${label}</div><div class="as-row"><span class="as-val">${value}</span><span class="as-sub">${sub}</span></div></div>`;
+    const item = (label, value, sub, cls = '') => `<div class="as-item ${cls}"><div class="as-label">${label}</div><div class="as-row"><span class="as-val">${value}</span><span class="as-sub">${sub}</span></div></div>`;
     const S = L.season;
     const week = S.week == null ? '' : (S.week === 0 ? `Rest week · Day ${S.day}` : `Week ${S.week} · Day ${S.day}`);
     return `<section class="astats" aria-label="Season and alliance stats">
@@ -622,21 +624,19 @@ footer a { color: var(--ink-2); }
         </div>
         <div class="as-updated">Last updated: <b>${utcStamp(L.fetchedAt)}</b><span>(${ago(L.fetchedAt)})</span></div>
       </div>
-      <div class="as-main">
-        <div class="as-label">ALLIANCE POWER</div>
-        <div class="as-big">${T(nowP)}</div>
-        <div class="as-bar" aria-hidden="true"><span style="width:${startW.toFixed(1)}%"></span><span class="gain" style="width:${(100 - startW).toFixed(1)}%"></span></div>
-        <div class="as-bar-labels"><span>Season start ${T(startP)}</span><span class="up">${gain >= 0 ? '+' : '−'}${T(Math.abs(gain))} (${gain >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%)</span></div>
-        <div class="as-list as-under">
-          ${item('SEASON DAMAGE', T(dmg), `${fighters} of ${M.length} dealt damage`)}
-          ${item('AVERAGE POWER', T(avg(mains)), `main accounts (${T(avg(M))} with alts)`)}
+      <div class="as-grid">
+        <div class="as-main">
+          <div class="as-label">ALLIANCE POWER</div>
+          <div class="as-big">${T(nowP)}</div>
+          <div class="as-bar" aria-hidden="true"><span style="width:${startW.toFixed(1)}%"></span><span class="gain" style="width:${(100 - startW).toFixed(1)}%"></span></div>
+          <div class="as-bar-labels"><span>Season start ${T(startP)}</span><span class="up">${gain >= 0 ? '+' : '−'}${T(Math.abs(gain))} (${gain >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%)</span></div>
         </div>
-      </div>
-      <div class="as-list">
-        ${item('MEMBERS', `${A.members}${A.maxMembers ? ' / ' + A.maxMembers : ''}`, 'slots filled')}
-        ${X.activePlayers != null ? item('ACTIVE PLAYERS', `${X.activePlayers} / ${X.countPlayers ?? A.members}`, 'per KG Companion') : ''}
+        ${item('MEMBERS', `${A.members}${A.maxMembers ? ' / ' + A.maxMembers : ''}`, 'slots filled', 'r1')}
+        ${item('ACTIVE PLAYERS', X.activePlayers != null ? `${X.activePlayers} / ${X.countPlayers ?? A.members}` : '—', 'per KG Companion', 'r1')}
+        ${item('SEASON DAMAGE', T(dmg), `${fighters} of ${M.length} dealt damage`)}
+        ${item('AVERAGE POWER', T(avg(mains)), `main accounts (${T(avg(M))} with alts)`)}
+        ${item('ALLIANCE PVP INDEX', X.pvpRate != null ? X.pvpRate.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—', 'lifetime')}
         ${item('ALTS', String(alts.length), `all R1 · ${alts.filter((x) => seasonOf(x).dmg > 0).length} fought this season`)}
-        ${X.pvpRate != null ? item('ALLIANCE PVP INDEX', X.pvpRate.toLocaleString('en-US', { maximumFractionDigits: 2 }), 'lifetime') : ''}
       </div>
     </section>`;
   }
