@@ -5,9 +5,9 @@
   "resetHourUTC": 0,
   "seasonAnchorDate": "2026-09-28",
   "seasonLengthDays": 28,
-  "adjustedExponent": 1.4,
+  "adjustedExponent": 1.45,
   "adjustedRecalcDay": 8,
-  "adjustedMinPowerT": 1,
+  "adjustedExcludeRanks": ["R1"],
   "inactiveDays": 3,
   "historyDays": 180
 }

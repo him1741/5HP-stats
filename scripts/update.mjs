@@ -338,11 +338,13 @@ function fitExponent(pairs) {
   return { k: num / den, players: pts.length };
 }
 st.adjusted ??= { exponent: config.adjustedExponent ?? 1.4, season: st.season, computedOn: today, basedOn: null, players: null };
+// Until the first day-8 re-measure, the exponent follows the starting value in config.json.
+if (st.adjusted.basedOn == null && config.adjustedExponent != null) st.adjusted.exponent = config.adjustedExponent;
 const recalcDay = config.adjustedRecalcDay ?? 8;
-const adjMin = (config.adjustedMinPowerT ?? 1) * 1e12;   // tiny accounts are left out of the Adjusted score
+const adjExclude = new Set(config.adjustedExcludeRanks ?? ['R1']);   // alts (R1) are left out of the Adjusted score
 if (dayNumber != null && dayNumber >= recalcDay && st.adjusted.season !== st.season) {
   const prev = await readJson('prev-season.json', null);
-  const fit = prev?.rows ? fitExponent(prev.rows.map((r) => [r.maxPower ?? r.power, r.dmg]).filter(([mp]) => mp >= adjMin)) : null;
+  const fit = prev?.rows ? fitExponent(prev.rows.filter((r) => !adjExclude.has(r.rank)).map((r) => [r.maxPower ?? r.power, r.dmg])) : null;
   if (fit) {
     const k = Math.min(2, Math.max(0.5, Math.round(fit.k * 100) / 100));   // keep it within a sane range
     console.log(`Adjusted exponent re-measured from Season ${prev.season}: ${st.adjusted.exponent} → ${k} (${fit.players} players).`);
@@ -401,7 +403,7 @@ const latest = {
     techLevel: alliance.techLevel ?? null, kvkWins: alliance.kvkWins ?? null,
   },
   scoreFormula: 'damage / maxPower',
-  adjusted: { ...st.adjusted, recalcDay, minPowerT: adjMin / 1e12 },
+  adjusted: { ...st.adjusted, recalcDay, excludeRanks: [...adjExclude] },
   wins,
   allianceStats,
   inactiveDays: config.inactiveDays ?? 3,
