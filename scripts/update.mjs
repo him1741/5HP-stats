@@ -403,7 +403,7 @@ const latest = {
     techLevel: alliance.techLevel ?? null, kvkWins: alliance.kvkWins ?? null,
   },
   scoreFormula: 'damage / maxPower',
-  adjusted: { ...st.adjusted, recalcDay, excludeRanks: [...adjExclude] },
+  adjusted: { ...st.adjusted, recalcDay, excludeRanks: [...adjExclude], minPowerT: config.adjustedMinPowerT ?? 1 },
   wins,
   allianceStats,
   inactiveDays: config.inactiveDays ?? 3,
