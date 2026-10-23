@@ -392,7 +392,7 @@ footer a { color: var(--ink-2); }
 
 
   <nav class="tabs" role="tablist" aria-label="Views">
-    <button role="tab" data-view="roster" id="tab-roster">Master roster</button>
+    <button role="tab" data-view="roster" id="tab-roster">Roster</button>
     <button role="tab" data-view="daily" id="tab-daily">Daily PvP</button>
     <button role="tab" data-view="calendar" id="tab-calendar">Activity calendar</button>
     <button role="tab" data-view="season" id="tab-season">Season leaderboard</button>
@@ -630,7 +630,7 @@ footer a { color: var(--ink-2); }
   ];
   const VIEWS = {
     roster: {
-      title: () => `Season ${data.latest.season.number} Master Roster`,
+      title: () => `Season ${data.latest.season.number} Roster`,
       refresh: 'Refreshes every ~15 minutes',
       counting: () => `${data.latest.members.length} members in [${esc(data.latest.alliance.tag)}] right now.`,
       extra: () => '',
