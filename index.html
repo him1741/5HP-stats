@@ -66,7 +66,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .show > span { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
 .chip { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; min-width: 50px; padding: 5px 12px; font: 600 15px/1.2 var(--font); cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--chip); border-color: var(--chip-line); color: var(--chip-ink); }
-.tabs { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 22px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 22px; border-bottom: 1px solid var(--line); }
 .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 10px 2px; font: 600 14px/1.2 var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--violet); cursor: pointer; }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--violet-strong); }
@@ -392,7 +392,7 @@ footer a { color: var(--ink-2); }
 
 
   <nav class="tabs" role="tablist" aria-label="Views">
-    <button role="tab" data-view="roster" id="tab-roster">Roster</button>
+    <button role="tab" data-view="roster" id="tab-roster">Alliance members</button>
     <button role="tab" data-view="daily" id="tab-daily">Daily PvP</button>
     <button role="tab" data-view="calendar" id="tab-calendar">Activity calendar</button>
     <button role="tab" data-view="season" id="tab-season">Season leaderboard</button>
@@ -630,7 +630,7 @@ footer a { color: var(--ink-2); }
   ];
   const VIEWS = {
     roster: {
-      title: () => `Season ${data.latest.season.number} Roster`,
+      title: () => `Season ${data.latest.season.number} Alliance Members`,
       refresh: 'Refreshes every ~15 minutes',
       counting: () => `${data.latest.members.length} members in [${esc(data.latest.alliance.tag)}] right now.`,
       extra: () => '',
