@@ -248,7 +248,7 @@ if (!firstRun) {
       changes.push({ t: now.toISOString(), type: 'join', id: Number(id), name: m.nickname, power: Number(m.power) || 0, rank: m.allianceRankName });
     } else {
       st.known[id].name = m.nickname;
-      // Lifetime damage should never go down; if it does, re-baseline.
+      // KG Companion's total covers the last 3 seasons, so it drops when the oldest season falls off; re-baseline when it does.
       if (st.dayBaseline[id] && big(m.pvpDamage) < big(st.dayBaseline[id].pvp)) st.dayBaseline[id] = snap(m);
       if (st.seasonBaseline[id] && big(m.pvpDamage) < big(st.seasonBaseline[id].pvp)) st.seasonBaseline[id] = { ...snap(m), since: today };
     }
@@ -367,7 +367,7 @@ try {
       maxPower: Number(f.maxPower) || null,         // total max power now
       activePlayers: f.activePlayers ?? null,
       countPlayers: f.countPlayers ?? null,
-      pvpRate: f.pvpRate ?? null,                   // alliance-wide lifetime PvP index
+      pvpRate: f.pvpRate ?? null,                   // alliance-wide PvP index over the last 3 seasons
     };
   }
 } catch (e) {

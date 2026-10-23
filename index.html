@@ -635,7 +635,7 @@ footer a { color: var(--ink-2); }
         ${item('ACTIVE PLAYERS', X.activePlayers != null ? `${X.activePlayers} / ${X.countPlayers ?? A.members}` : '—', 'per KG Companion', 'r1')}
         ${item('SEASON DAMAGE', T(dmg), `${fighters} of ${M.length} dealt damage`)}
         ${item('AVERAGE POWER', T(avg(mains)), `main accounts (${T(avg(M))} with alts)`)}
-        ${item('ALLIANCE PVP INDEX', X.pvpRate != null ? X.pvpRate.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—', 'lifetime')}
+        ${item('ALLIANCE PVP INDEX', X.pvpRate != null ? X.pvpRate.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—', 'last 3 seasons')}
         ${item('ALTS', String(alts.length), `all R1 · ${alts.filter((x) => seasonOf(x).dmg > 0).length} fought this season`)}
       </div>
     </section>`;
@@ -775,7 +775,7 @@ footer a { color: var(--ink-2); }
     if (m) {
       html += `<p class="sub">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()}</p>`;
       const g = growth(m), f = fought(m);
-      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T', g == null ? '' : fmtGrowth(g) + 'T this season')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore) + ' · Adjusted ' + fmtAdj(adjusted(m.dailyDmg, m.maxPower, m.rank)))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore) + ' · Adjusted ' + fmtAdj(adjusted(m.seasonDmg, m.maxPower, m.rank)))}${kv('PvP total (KG Companion)', fmtT(Number(m.pvp)))}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}${kv('Days fought', `${f.n} of ${f.of}`, 'this season')}</div>`;
+      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T', g == null ? '' : fmtGrowth(g) + 'T this season')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore) + ' · Adjusted ' + fmtAdj(adjusted(m.dailyDmg, m.maxPower, m.rank)))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore) + ' · Adjusted ' + fmtAdj(adjusted(m.seasonDmg, m.maxPower, m.rank)))}${kv('PvP total', fmtT(Number(m.pvp)), 'last 3 seasons')}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}${kv('Days fought', `${f.n} of ${f.of}`, 'this season')}</div>`;
       html += weekBreakdown(m);
     } else {
       html += '<p class="note">No longer in the alliance.</p>';
