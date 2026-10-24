@@ -239,9 +239,9 @@ footer a { color: var(--ink-2); }
 .hl-band.hl-dmg .step { background: rgb(255 138 92 / .16); }
 .hl-band.hl-grow .step { background: rgb(127 220 159 / .14); }
 .hl-band.hl-champ .step { background: rgb(169 156 245 / .16); }
-.hl-rest { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 8px; align-self: center; }
+.hl-rest { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 6px; align-self: center; }
 .hl-rest .lbl { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--violet); }
-.hl-rest .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14.5px; }
+.hl-rest .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14.5px; }
 .hl-rest .row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hl-rest .row .p { color: var(--muted); margin-right: 4px; }
 .hl-rest .row b { font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -911,20 +911,20 @@ footer a { color: var(--ink-2); }
     return `<section class="hl-band ${cls}">
       <div class="hl-intro"><div class="hl-emoji" aria-hidden="true">${emoji}</div><h3>${title}</h3><p>${subtitle}</p><p class="total">${total}</p></div>
       <div class="podium">${pod(1)}${pod(0)}${pod(2)}</div>
-      <div class="hl-rest">${rest ? `<div class="lbl">ALSO IN THE TOP 5</div>${rest}` : ''}</div>
+      <div class="hl-rest">${rest ? `<div class="lbl">HONORABLE MENTIONS</div>${rest}` : ''}</div>
     </section>`;
   }
   function highlightsHTML() {
     const M = data.latest.members;
-    const top5 = (arr, key) => arr.map((x) => [x, key(x)]).filter(([, v]) => v != null && v > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([x]) => x);
+    const top10 = (arr, key) => arr.map((x) => [x, key(x)]).filter(([, v]) => v != null && v > 0).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([x]) => x);
     const dmgTotal = M.reduce((t, x) => t + seasonOf(x).dmg, 0);
     const growTotal = M.reduce((t, x) => t + (growth(x) || 0), 0);
     let html = band('hl-dmg', '💥', 'Total damage', 'Most PvP damage this season', `Alliance total: ${fmtT(dmgTotal)}`,
-      top5(M, (x) => seasonOf(x).dmg), (x) => fmtT(seasonOf(x).dmg));
+      top10(M, (x) => seasonOf(x).dmg), (x) => fmtT(seasonOf(x).dmg));
     html += band('hl-grow', '📈', 'Overall growth', 'Largest max power gained this season', `Alliance gained ${fmtGrowth(growTotal)}T`,
-      top5(M.filter((x) => !isAlt(x) || seasonOf(x).dmg > 0), growth), (x) => fmtGrowth(growth(x)) + 'T');
+      top10(M.filter((x) => !isAlt(x) || seasonOf(x).dmg > 0), growth), (x) => fmtGrowth(growth(x)) + 'T');
     html += band('hl-champ', '⚔️', 'Fight like a champ', 'Highest PvP rating this season (damage ÷ max power)', `Alts with no PvP and accounts under ${adjMinT()}T are left out`,
-      top5(M.filter((x) => (!isAlt(x) || seasonOf(x).dmg > 0) && x.maxPower >= adjMinT() * 1e12), (x) => seasonOf(x).score), (x) => fmtScore(seasonOf(x).score));
+      top10(M.filter((x) => (!isAlt(x) || seasonOf(x).dmg > 0) && x.maxPower >= adjMinT() * 1e12), (x) => seasonOf(x).score), (x) => fmtScore(seasonOf(x).score));
     const W = data.latest.wins;
     if (Array.isArray(W)) {
       const chips = W.map((w, i) => `<div class="win${i === 0 ? ' latest' : ''}"><span aria-hidden="true">🏆</span><span><b>Season ${w.season}</b><small>${fmtDateY(w.date)}</small></span></div>`).join('');
