@@ -540,7 +540,7 @@ footer a { color: var(--ink-2); }
   const adjNote = () => {
     const a = data.latest?.adjusted || {};
     const when = a.basedOn ? `Last re-measured on ${fmtDate(a.computedOn)} from Season ${a.basedOn} (${a.players} players).` : 'Set from Seasons 32 and 33.';
-    return `${when} Re-measured on day ${a.recalcDay ?? 8} of every season from the season that just finished.`;
+    return `${when} Re-measured on day ${a.recalcDay ?? 8} of every season, when the roster locks, from those players' own damage last season (days 8–28, from KG Companion).`;
   };
   // Adjusted leaves out the off week: days 1-7 of each season (week 1).
   const offDays = () => data.latest?.adjusted?.skipDays ?? 7;

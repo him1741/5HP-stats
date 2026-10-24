@@ -47,6 +47,8 @@ const round = (x, n = 2) => Math.round(x * 10 ** n) / 10 ** n;
 async function fetchText(url) {
   if (process.env.FIXTURE_ACTIVITY) {
     const u = new URL(url), s = u.searchParams.get('s');
+    const ch = u.pathname.match(/\/character\/(\d+)\/activity$/);
+    if (ch) return readFile(path.join(process.env.FIXTURE_ACTIVITY, `char-${ch[1]}.json`), 'utf8');
     if (u.pathname.endsWith('/compare')) return readFile(path.join(process.env.FIXTURE_ACTIVITY, 'compare.json'), 'utf8');
     if (u.pathname.endsWith('/kvk')) return readFile(path.join(process.env.FIXTURE_ACTIVITY, 'kvk.json'), 'utf8');
     return readFile(path.join(process.env.FIXTURE_ACTIVITY, `activity-${s || 'current'}.json`), 'utf8');
@@ -342,8 +344,33 @@ st.adjusted ??= { exponent: config.adjustedExponent ?? 1.4, season: st.season, c
 if (st.adjusted.basedOn == null && config.adjustedExponent != null) st.adjusted.exponent = config.adjustedExponent;
 const recalcDay = config.adjustedRecalcDay ?? 8;
 const adjExclude = new Set(config.adjustedExcludeRanks ?? ['R1']);   // alts (R1) are left out of the Adjusted score
+// Measure from the roster as it stands on day 8 (no one can join after that): every
+// main account at the size minimum, using each player's own damage on days 8-28 of
+// last season from KG Companion, wherever they played it.
+async function rosterExponentData() {
+  if (!curSeasonStart) return null;
+  const lastStart = addDays(curSeasonStart, -SEASON_LEN), lastEnd = addDays(curSeasonStart, -1);
+  const from = addDays(lastStart, config.adjustedSkipDays ?? 7);
+  const minP = (config.adjustedMinPowerT ?? 1) * 1e12;
+  const roster = members.filter((m) => !adjExclude.has(m.allianceRankName) && Math.max(Number(m.maxPower) || 0, Number(m.power) || 0) >= minP);
+  const pairs = []; let failed = 0;
+  for (const m of roster) {
+    try {
+      const j = JSON.parse((await fetchText(`https://kg.dbapp.ru/api/character/${m.id}/activity`)).replace(/"(pvpDamage|diffDamage|maxPower|power)":(-?\d+)/g, '"$1":"$2"'));
+      const recs = (j.pvp || []).filter((a) => a.date <= lastEnd);
+      const dmg = recs.filter((a) => a.date >= from).reduce((t, a) => { const d = big(a.diffDamage); return d > 0n ? t + d : t; }, 0n);
+      const mp = Number(recs.at(-1)?.maxPower) || Math.max(Number(m.maxPower) || 0, Number(m.power) || 0);
+      if (mp >= minP) pairs.push([mp, Number(dmg)]);
+    } catch { failed++; if (failed >= 5 && pairs.length === 0) break; }   // KG Companion looks down: stop early
+    if (!process.env.FIXTURE_ACTIVITY) await new Promise((r) => setTimeout(r, 250));   // go easy on KG Companion
+  }
+  if (!pairs.length || failed > roster.length * 0.2) { console.warn(`Roster exponent: ${failed} of ${roster.length} players couldn't be fetched; using last season's leaderboard instead.`); return null; }
+  return { pairs, from, to: lastEnd, players: roster.length };
+}
+
 if (dayNumber != null && dayNumber >= recalcDay && st.adjusted.season !== st.season) {
   const prev = await readJson('prev-season.json', null);
+  const rosterData = await rosterExponentData();
   // Adjusted leaves out the off week (days 1-7), so measure from each player's damage on days 8 onward.
   const offDays = config.adjustedSkipDays ?? 7;
   const fromDay = prev?.from ? addDays(prev.from, offDays) : null;
@@ -353,11 +380,12 @@ if (dayNumber != null && dayNumber >= recalcDay && st.adjusted.season !== st.sea
     const off = history.days.length - h.d.length;
     return history.days.reduce((t, d, i) => (d >= fromDay && d <= prev.to ? t + (h.d[i - off] || 0) : t), 0);
   };
-  const fit = prev?.rows ? fitExponent(prev.rows.filter((r) => !adjExclude.has(r.rank) && (r.maxPower ?? r.power) >= (config.adjustedMinPowerT ?? 1) * 1e12).map((r) => [r.maxPower ?? r.power, laterDmg(r.id) ?? r.dmg])) : null;
+  const fit = rosterData ? fitExponent(rosterData.pairs) : prev?.rows ? fitExponent(prev.rows.filter((r) => !adjExclude.has(r.rank) && (r.maxPower ?? r.power) >= (config.adjustedMinPowerT ?? 1) * 1e12).map((r) => [r.maxPower ?? r.power, laterDmg(r.id) ?? r.dmg])) : null;
   if (fit) {
     const k = Math.min(2, Math.max(0.5, Math.round(fit.k * 100) / 100));   // keep it within a sane range
-    console.log(`Adjusted exponent re-measured from Season ${prev.season}: ${st.adjusted.exponent} → ${k} (${fit.players} players).`);
-    st.adjusted = { exponent: k, season: st.season, computedOn: today, basedOn: prev.season, players: fit.players };
+    const basedOn = (st.season ?? 1) - 1;
+    console.log(`Adjusted exponent re-measured from Season ${basedOn} (${rosterData ? 'day-8 roster, KG Companion' : 'last season leaderboard'}): ${st.adjusted.exponent} → ${k} (${fit.players} players).`);
+    st.adjusted = { exponent: k, season: st.season, computedOn: today, basedOn, players: fit.players, source: rosterData ? 'roster' : 'leaderboard' };
   } else {
     console.log('Adjusted exponent: not enough data from last season to re-measure; keeping', st.adjusted.exponent);
     st.adjusted.season = st.season;   // don't retry every run this season
