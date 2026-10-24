@@ -344,7 +344,16 @@ const recalcDay = config.adjustedRecalcDay ?? 8;
 const adjExclude = new Set(config.adjustedExcludeRanks ?? ['R1']);   // alts (R1) are left out of the Adjusted score
 if (dayNumber != null && dayNumber >= recalcDay && st.adjusted.season !== st.season) {
   const prev = await readJson('prev-season.json', null);
-  const fit = prev?.rows ? fitExponent(prev.rows.filter((r) => !adjExclude.has(r.rank) && (r.maxPower ?? r.power) >= (config.adjustedMinPowerT ?? 1) * 1e12).map((r) => [r.maxPower ?? r.power, r.dmg])) : null;
+  // Adjusted leaves out the off week (days 1-7), so measure from each player's damage on days 8 onward.
+  const offDays = config.adjustedSkipDays ?? 7;
+  const fromDay = prev?.from ? addDays(prev.from, offDays) : null;
+  const laterDmg = (id) => {
+    const h = history.players[String(id)];
+    if (!h || !fromDay) return null;
+    const off = history.days.length - h.d.length;
+    return history.days.reduce((t, d, i) => (d >= fromDay && d <= prev.to ? t + (h.d[i - off] || 0) : t), 0);
+  };
+  const fit = prev?.rows ? fitExponent(prev.rows.filter((r) => !adjExclude.has(r.rank) && (r.maxPower ?? r.power) >= (config.adjustedMinPowerT ?? 1) * 1e12).map((r) => [r.maxPower ?? r.power, laterDmg(r.id) ?? r.dmg])) : null;
   if (fit) {
     const k = Math.min(2, Math.max(0.5, Math.round(fit.k * 100) / 100));   // keep it within a sane range
     console.log(`Adjusted exponent re-measured from Season ${prev.season}: ${st.adjusted.exponent} → ${k} (${fit.players} players).`);
@@ -403,7 +412,7 @@ const latest = {
     techLevel: alliance.techLevel ?? null, kvkWins: alliance.kvkWins ?? null,
   },
   scoreFormula: 'damage / maxPower',
-  adjusted: { ...st.adjusted, recalcDay, excludeRanks: [...adjExclude], minPowerT: config.adjustedMinPowerT ?? 1 },
+  adjusted: { ...st.adjusted, recalcDay, excludeRanks: [...adjExclude], minPowerT: config.adjustedMinPowerT ?? 1, skipDays: config.adjustedSkipDays ?? 7 },
   wins,
   allianceStats,
   inactiveDays: config.inactiveDays ?? 3,

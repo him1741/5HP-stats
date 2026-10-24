@@ -542,11 +542,35 @@ footer a { color: var(--ink-2); }
     const when = a.basedOn ? `Last re-measured on ${fmtDate(a.computedOn)} from Season ${a.basedOn} (${a.players} players).` : 'Set from Seasons 32 and 33.';
     return `${when} Re-measured on day ${a.recalcDay ?? 8} of every season from the season that just finished.`;
   };
-  const adjCol = (dmgOf, maxOf) => ({ key: 'adj', label: 'Adjusted', get: (x) => adjusted(dmgOf(x), maxOf(x), x.rank) ?? -1, cell: (x) => `<b>${fmtAdj(adjusted(dmgOf(x), maxOf(x), x.rank))}</b>` });
+  // Adjusted leaves out the off week: days 1-7 of each season (week 1).
+  const offDays = () => data.latest?.adjusted?.skipDays ?? 7;
+  const dayOfSeason = (d) => {   // 0-based day within its season
+    const S = data.latest.season, len = S.length || 28;
+    if (!S.startedOn) return 99;
+    const n = daysBetween(S.startedOn, d);
+    return ((n % len) + len) % len;
+  };
+  const isOffDay = (d) => dayOfSeason(d) < offDays();
+  // Damage that counts for Adjusted: the season without the off week (and without left-out days).
+  let adjCache = new Map(), adjKey = '';
+  function adjDmg(x, which = 'current') {
+    const key = which + '|' + data.latest.fetchedAt + '|' + [...excluded].sort().join(',');
+    if (key !== adjKey) { adjCache = new Map(); adjKey = key; }
+    const ck = which + x.id;
+    if (adjCache.has(ck)) return adjCache.get(ck);
+    let dates;
+    if (which === 'current') { const S = data.latest.season; dates = S.startedOn ? seasonDates(S.startedOn, S.length || 28, { current: true }) : []; }
+    else { const P = data.prev; dates = P ? seasonDates(P.from, daysBetween(P.from, P.to) + 1) : []; }
+    const dm = dmgByDate(x.id, which === 'current' ? x : null);
+    const v = dates.filter((d) => !isOffDay(d)).reduce((t, d) => t + (dm.get(d) || 0), 0);
+    adjCache.set(ck, v);
+    return v;
+  }
+  const adjCol = (dmgOf, maxOf, on = () => true) => ({ key: 'adj', label: 'Adjusted', get: (x) => (on() ? adjusted(dmgOf(x), maxOf(x), x.rank) : null) ?? -1, cell: (x) => `<b>${fmtAdj(on() ? adjusted(dmgOf(x), maxOf(x), x.rank) : null)}</b>` });
   const seen = (d) => d == null ? '—' : d === 0 ? '<span class="seen-ok">Today</span>' : d < 3 ? `<span class="seen-ok">${d}d ago</span>` : d < 7 ? `<span class="seen-warn">${d}d ago</span>` : `<span class="seen-bad">${d}d ago</span>`;
   const formulaBox = () => `<details class="howto"><summary>How the scores work</summary><div class="howto-body">
     <p><b>Activity</b> = PvP damage ÷ max power. The same score the game and KG Companion use: a higher score means more fighting for the account's size.</p>
-    <p><b>Adjusted</b> = PvP damage ÷ max power<sup>${adjExp()}</sup>. In this alliance bigger accounts deal more than proportionally more damage, so even Activity ranks them higher. Using the ${adjExp()} power instead removes that edge, so big and small accounts spread evenly through the rankings and what's left is how hard each player fought for their size. ${adjNote()} The exponent is measured from main accounts only, since some alts are big enough to skew it. Accounts under ${adjMinT()}T max power show — and aren't ranked by Adjusted.</p>
+    <p><b>Adjusted</b> = PvP damage ÷ max power<sup>${adjExp()}</sup>. In this alliance bigger accounts deal more than proportionally more damage, so even Activity ranks them higher. Using the ${adjExp()} power instead removes that edge, so big and small accounts spread evenly through the rankings and what's left is how hard each player fought for their size. ${adjNote()} The exponent is measured from main accounts only, since some alts are big enough to skew it. Accounts under ${adjMinT()}T max power show — and aren't ranked by Adjusted. It leaves out the off week at the start of each season (days 1–7) and counts days 8–28 only; Total Activity and Damage still count the whole season.</p>
     <p>Alts (R1) appear in the leaderboards and rankings only once they've dealt PvP damage in that period.</p>
     <p>Damage and power are in T. Click a column heading to sort by it.</p></div></details>`;
 
@@ -678,7 +702,7 @@ footer a { color: var(--ink-2); }
       extra: () => dayNav(),
       after: formulaBox,
       rows: () => dailyRows().filter((x) => !isAlt(x) || x.dailyDmg > 0),
-      cols: [...base, { key: 'score', label: 'Activity', get: (x) => x.dailyScore, cell: (x) => `<b>${fmtScore(x.dailyScore)}</b>` }, { key: 'dmg', label: 'Damage', get: (x) => x.dailyDmg, cell: (x) => `<span class="dmg-cell">${fmtT(x.dailyDmg)}</span>` }, adjCol((x) => x.dailyDmg, (x) => x.maxPower)],
+      cols: [...base, { key: 'score', label: 'Activity', get: (x) => x.dailyScore, cell: (x) => `<b>${fmtScore(x.dailyScore)}</b>` }, { key: 'dmg', label: 'Damage', get: (x) => x.dailyDmg, cell: (x) => `<span class="dmg-cell">${fmtT(x.dailyDmg)}</span>` }, adjCol((x) => x.dailyDmg, (x) => x.maxPower, () => !isOffDay(dailyDate || data.latest.gameDay))],
       def: 'score', medals: true,
     },
     season: {
@@ -691,7 +715,7 @@ footer a { color: var(--ink-2); }
       extra: () => calendar(),
       after: formulaBox,
       rows: () => data.latest.members.filter((x) => !isAlt(x) || seasonOf(x).dmg > 0),
-      cols: [base[0], { ...base[1], cell: nameWithDays('current') }, base[2], { key: 'score', label: 'Total Activity', get: (x) => seasonOf(x).score, cell: (x) => `<b>${fmtScore(seasonOf(x).score)}</b>` }, { key: 'dmg', label: 'Damage', get: (x) => seasonOf(x).dmg, cell: (x) => `<span class="dmg-cell">${fmtT(seasonOf(x).dmg)}</span>` }, adjCol((x) => seasonOf(x).dmg, (x) => x.maxPower), foughtCol('current')],
+      cols: [base[0], { ...base[1], cell: nameWithDays('current') }, base[2], { key: 'score', label: 'Total Activity', get: (x) => seasonOf(x).score, cell: (x) => `<b>${fmtScore(seasonOf(x).score)}</b>` }, { key: 'dmg', label: 'Damage', get: (x) => seasonOf(x).dmg, cell: (x) => `<span class="dmg-cell">${fmtT(seasonOf(x).dmg)}</span>` }, adjCol((x) => adjDmg(x), (x) => x.maxPower), foughtCol('current')],
       def: 'score', medals: true,
     },
     calendar: {
@@ -715,7 +739,7 @@ footer a { color: var(--ink-2); }
       extra: () => '',
       after: () => data.prev ? formulaBox() : '',
       rows: () => (data.prev?.rows || []).filter((x) => !isAlt(x) || x.dmg > 0),
-      cols: [base[0], { ...base[1], cell: nameWithDays('prev') }, base[2], { key: 'score', label: 'Total Activity', get: (x) => x.score, cell: (x) => `<b>${fmtScore(x.score)}</b>` }, { key: 'dmg', label: 'Damage', get: (x) => x.dmg, cell: (x) => `<span class="dmg-cell">${fmtT(x.dmg)}</span>` }, adjCol((x) => x.dmg, (x) => x.maxPower ?? x.power), foughtCol('prev')],
+      cols: [base[0], { ...base[1], cell: nameWithDays('prev') }, base[2], { key: 'score', label: 'Total Activity', get: (x) => x.score, cell: (x) => `<b>${fmtScore(x.score)}</b>` }, { key: 'dmg', label: 'Damage', get: (x) => x.dmg, cell: (x) => `<span class="dmg-cell">${fmtT(x.dmg)}</span>` }, adjCol((x) => adjDmg(x, 'prev'), (x) => x.maxPower ?? x.power), foughtCol('prev')],
       def: 'score', medals: true,
     },
   };
@@ -936,7 +960,7 @@ footer a { color: var(--ink-2); }
       if (!(v > 0) || d < from || excluded.has(d)) return;
       const m = byId.get(id), e = { id: Number(id), name: m?.name || name, rank: m?.rank || '', d, v, mp };
       if (!dmgBest.has(d) || v > dmgBest.get(d).v) dmgBest.set(d, e);
-      if (mp >= minP) { const r = v / mp; if (!rateBest.has(d) || r > rateBest.get(d).r) rateBest.set(d, { ...e, r }); }
+      if (mp >= minP && !isOffDay(d)) { const r = v / mp; if (!rateBest.has(d) || r > rateBest.get(d).r) rateBest.set(d, { ...e, r }); }
     };
     for (const [id, h] of Object.entries(H?.players || {})) {
       const off = days.length - h.d.length; let mp = null;
@@ -960,7 +984,7 @@ footer a { color: var(--ink-2); }
     html += band('hl-champ', '⚔️', 'Fight like a champ', 'Highest PvP rating this season (damage ÷ max power)', `Alts with no PvP and accounts under ${adjMinT()}T are left out`,
       top10(M.filter((x) => (!isAlt(x) || seasonOf(x).dmg > 0) && x.maxPower >= adjMinT() * 1e12), (x) => seasonOf(x).score), (x) => fmtScore(seasonOf(x).score));
     const DW = dailyWinners();
-    html += band('hl-p4p', '💪', 'Pound for pound', "Each day's best PvP rating (that day's damage ÷ max power), ranked", `One winner per day · alts with no PvP and accounts under ${adjMinT()}T are left out`,
+    html += band('hl-p4p', '💪', 'Pound for pound', "Each day's best PvP rating (that day's damage ÷ max power), ranked", `One winner per day · off-week days (1–7), alts with no PvP and accounts under ${adjMinT()}T are left out`,
       DW.rating.slice(0, 10), (x) => fmtScore(x.r));
     const wins = new Map(); DW.dmg.forEach((e) => wins.set(e.name, (wins.get(e.name) || 0) + 1));
     const most = Math.max(0, ...wins.values()), leaders = [...wins].filter(([, n]) => n === most).map(([n]) => esc(n));
@@ -1031,12 +1055,12 @@ footer a { color: var(--ink-2); }
     const order = (x) => RANKS.indexOf(x.rank);
     const rows = [...L.members].sort((a, b) => order(a) - order(b) || b.power - a.power);
     const header = ['Player', 'ID', 'Rank', 'Alt (R1)', 'Level', 'Power (T)', 'Max power (T)', 'Growth this season (T)', 'Last online', 'Days since online',
-      'Damage today (T)', 'Activity today', 'Season damage (T)', 'Season activity', 'Season adjusted', `Days fought (of ${L.season.dayNumber ?? ''})`,
+      'Damage today (T)', 'Activity today', 'Season damage (T)', 'Season activity', 'Season adjusted (days 8-28)', `Days fought (of ${L.season.dayNumber ?? ''})`,
       'PvP total, last 3 seasons (T)', 'Tracked since'];
     downloadCSV(`${fileBase()}_all-player-data_${L.gameDay}.csv`, header, rows.map((x) => {
       const sd = seasonOf(x);
       return [x.name, x.id, x.rank, isAlt(x) ? 'yes' : 'no', x.level, tT(x.power), tT(x.maxPower), r2(growth(x)), x.lastOnline, x.daysOffline,
-        tT(x.dailyDmg, 1), r2(x.dailyScore), tT(sd.dmg, 1), r2(sd.score), r2(adjusted(sd.dmg, x.maxPower, x.rank)), fought(x).n,
+        tT(x.dailyDmg, 1), r2(x.dailyScore), tT(sd.dmg, 1), r2(sd.score), r2(adjusted(adjDmg(x), x.maxPower, x.rank)), fought(x).n,
         tT(Number(x.pvp), 1), x.firstSeen];
     }));
   }
@@ -1138,7 +1162,7 @@ footer a { color: var(--ink-2); }
     if (m) {
       html += `<p class="sub">${rankCell(m.rank)} &nbsp;Level ${(m.level ?? 0).toLocaleString()}</p>`;
       const g = growth(m), f = fought(m);
-      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T', g == null ? '' : fmtGrowth(g) + 'T this season')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore) + ' · Adjusted ' + fmtAdj(adjusted(m.dailyDmg, m.maxPower, m.rank)))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore) + ' · Adjusted ' + fmtAdj(adjusted(m.seasonDmg, m.maxPower, m.rank)))}${kv('PvP total', fmtT(Number(m.pvp)), 'last 3 seasons')}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}${kv('Days fought', `${f.n} of ${f.of}`, 'this season')}</div>`;
+      html += `<div class="kv">${kv('Power', tNum(m.power) + 'T')}${kv('Peak power', tNum(m.maxPower) + 'T', g == null ? '' : fmtGrowth(g) + 'T this season')}${kv('Today', fmtT(m.dailyDmg), 'Activity ' + fmtScore(m.dailyScore) + ' · Adjusted ' + fmtAdj(isOffDay(data.latest.gameDay) ? null : adjusted(m.dailyDmg, m.maxPower, m.rank)))}${kv('This season', fmtT(m.seasonDmg), 'Activity ' + fmtScore(m.seasonScore) + ' · Adjusted ' + fmtAdj(adjusted(adjDmg(m), m.maxPower, m.rank)))}${kv('PvP total', fmtT(Number(m.pvp)), 'last 3 seasons')}${kv('Last online', m.daysOffline === 0 ? 'Today' : (m.daysOffline ?? '—') + ' days ago')}${kv('Days fought', `${f.n} of ${f.of}`, 'this season')}</div>`;
       html += weekBreakdown(m);
     } else {
       html += '<p class="note">No longer in the alliance.</p>';

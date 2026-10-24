@@ -9,6 +9,7 @@
   "adjustedRecalcDay": 8,
   "adjustedExcludeRanks": ["R1"],
   "adjustedMinPowerT": 5,
+  "adjustedSkipDays": 7,
   "inactiveDays": 3,
   "historyDays": 180
 }
