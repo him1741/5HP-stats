@@ -382,6 +382,13 @@ footer a { color: var(--ink-2); }
 .day-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; }
 .day-nav .dn-date { font-weight: 700; font-size: 15px; padding: 0 4px; }
 .cs-open { margin-top: 14px; width: 100%; text-align: center; color: var(--chip-ink); border-color: var(--chip-line); }
+.pod .when { font-size: 12.5px; color: var(--muted); }
+.hl-rest .row small.when { color: var(--muted); font-size: 12px; margin-left: 4px; }
+.hl-band.hl-p4p .step { background: rgb(246 201 76 / .13); }
+.hl-band.hl-hw .step { background: rgb(239 138 60 / .15); }
+.hl-band.hl-hw .hl-rest, .hl-band.hl-p4p .hl-rest { flex-basis: 265px; }
+.hl-band.hl-hw .hl-intro, .hl-band.hl-p4p .hl-intro { flex-basis: 200px; }
+.hl-band.hl-hw .podium, .hl-band.hl-p4p .podium { flex-basis: 380px; }
 </style>
 <!--ARTIFACT-HEAD-END-->
 </head>
@@ -905,14 +912,37 @@ footer a { color: var(--ink-2); }
     const pod = (i) => {
       const x = list[i];
       if (!x) return `<div class="pod p${i + 1} empty"><div class="medal-big">${MED[i]}</div><div class="val">—</div><div class="step">${PL[i]}</div></div>`;
-      return `<div class="pod p${i + 1}"><div class="medal-big">${MED[i]}</div><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>${rankCell(x.rank)}<div class="val">${valueOf(x)}</div><div class="step">${PL[i]}</div></div>`;
+      return `<div class="pod p${i + 1}"><div class="medal-big">${MED[i]}</div><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>${rankCell(x.rank)}<div class="val">${valueOf(x)}</div>${x.when ? `<div class="when">${x.when}</div>` : ''}<div class="step">${PL[i]}</div></div>`;
     };
-    const rest = list.slice(3).map((x, k) => `<div class="row"><span><span class="p">${k + 4}.</span><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button></span><b>${valueOf(x)}</b></div>`).join('');
+    const rest = list.slice(3).map((x, k) => `<div class="row"><span><span class="p">${k + 4}.</span><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>${x.when ? ` <small class="when">${x.when}</small>` : ''}</span><b>${valueOf(x)}</b></div>`).join('');
     return `<section class="hl-band ${cls}">
       <div class="hl-intro"><div class="hl-emoji" aria-hidden="true">${emoji}</div><h3>${title}</h3><p>${subtitle}</p><p class="total">${total}</p></div>
       <div class="podium">${pod(1)}${pod(0)}${pod(2)}</div>
       <div class="hl-rest">${rest ? `<div class="lbl">HONORABLE MENTIONS</div>${rest}` : ''}</div>
     </section>`;
+  }
+  // One winner per day this season: biggest damage, and best rating (damage ÷ that day's max power).
+  function dailyWinners() {
+    const L = data.latest, S = L.season, H = data.history, days = H?.days || [], today = L.gameDay;
+    if (!S.startedOn) return { dmg: [], rating: [] };
+    const from = S.countingFrom > S.startedOn ? S.countingFrom : S.startedOn;
+    const minP = adjMinT() * 1e12, byId = new Map(L.members.map((m) => [String(m.id), m]));
+    const dmgBest = new Map(), rateBest = new Map();
+    const consider = (d, id, name, v, mp) => {
+      if (!(v > 0) || d < from || excluded.has(d)) return;
+      const m = byId.get(id), e = { id: Number(id), name: m?.name || name, rank: m?.rank || '', d, v, mp };
+      if (!dmgBest.has(d) || v > dmgBest.get(d).v) dmgBest.set(d, e);
+      if (mp >= minP) { const r = v / mp; if (!rateBest.has(d) || r > rateBest.get(d).r) rateBest.set(d, { ...e, r }); }
+    };
+    for (const [id, h] of Object.entries(H?.players || {})) {
+      const off = days.length - h.d.length; let mp = null;
+      days.forEach((d, i) => { const p = h.p[i - off]; if (p != null) mp = p; if (d !== today) consider(d, id, h.n, h.d[i - off], mp || byId.get(id)?.maxPower || 0); });
+    }
+    for (const m of L.members) consider(today, String(m.id), m.name, m.dailyDmg, m.maxPower);
+    const when = (e) => fmtDay(e.d, { month: 'short', day: 'numeric' }) + (e.d === today ? ' (today so far)' : '');
+    const dmg = [...dmgBest.values()].sort((a, b) => b.v - a.v).map((e) => ({ ...e, when: when(e) }));
+    const rating = [...rateBest.values()].sort((a, b) => b.r - a.r).map((e) => ({ ...e, when: when(e) }));
+    return { dmg, rating };
   }
   function highlightsHTML() {
     const M = data.latest.members;
@@ -925,6 +955,14 @@ footer a { color: var(--ink-2); }
       top10(M.filter((x) => !isAlt(x) || seasonOf(x).dmg > 0), growth), (x) => fmtGrowth(growth(x)) + 'T');
     html += band('hl-champ', '⚔️', 'Fight like a champ', 'Highest PvP rating this season (damage ÷ max power)', `Alts with no PvP and accounts under ${adjMinT()}T are left out`,
       top10(M.filter((x) => (!isAlt(x) || seasonOf(x).dmg > 0) && x.maxPower >= adjMinT() * 1e12), (x) => seasonOf(x).score), (x) => fmtScore(seasonOf(x).score));
+    const DW = dailyWinners();
+    html += band('hl-p4p', '💪', 'Pound for pound', "Each day's best PvP rating (that day's damage ÷ max power), ranked", `One winner per day · alts with no PvP and accounts under ${adjMinT()}T are left out`,
+      DW.rating.slice(0, 10), (x) => fmtScore(x.r));
+    const wins = new Map(); DW.dmg.forEach((e) => wins.set(e.name, (wins.get(e.name) || 0) + 1));
+    const most = Math.max(0, ...wins.values()), leaders = [...wins].filter(([, n]) => n === most).map(([n]) => esc(n));
+    html += band('hl-hw', '🥊', 'Heavyweight champ', "Each day's top damage dealer, ranked by that day's damage",
+      `One champ per day${most ? ` · most days won: ${leaders.join(' and ')} (${most}${leaders.length > 1 ? ' each' : ''})` : ''}`,
+      DW.dmg.slice(0, 10), (x) => fmtT(x.v));
     const W = data.latest.wins;
     if (Array.isArray(W)) {
       const chips = W.map((w, i) => `<div class="win${i === 0 ? ' latest' : ''}"><span aria-hidden="true">🏆</span><span><b>Season ${w.season}</b><small>${fmtDateY(w.date)}</small></span></div>`).join('');
