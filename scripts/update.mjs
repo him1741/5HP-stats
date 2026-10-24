@@ -314,7 +314,7 @@ const rows = members.map((m) => {
   };
 });
 
-// Week 0 is the rest week (days 1–7), then Weeks 1–3, matching the in-game calendar.
+// week is 0-based: 0 = Week 1, the off week (days 1–7); the page shows it as Weeks 1–4.
 const seasonStart = curSeasonStart || config.seasonStartDate || st.seasonStartedOn;
 let week = null, dayOfWeek = null, dayNumber = null;
 if (seasonStart) {

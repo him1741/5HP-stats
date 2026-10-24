@@ -70,7 +70,7 @@ Open `config.json` in the repository, click the pencil icon, edit, and **Commit 
 | `allianceId` | The ID from the end of the KG Companion alliance link. Change it to track a different alliance. |
 | `resetHourUTC` | The hour (in UTC) of the in-game daily reset, so "today" starts at the right time. Default `0` (midnight UTC). |
 | `seasonAnchorDate` | Any date a season started on (seasons start on the same day for every server). Default `"2026-09-28"`. The site counts forward from it to know the current season, week and day. |
-| `seasonLengthDays` | Days per season, including the rest week. Default `28`. |
+| `seasonLengthDays` | Days per season, including the off week (Week 1). Default `28`. |
 | `historyDays` | How many days of history to keep for the charts. Default `180`. |
 
 The site's title, alliance tag and name come from the live data, so you don't have to edit the page itself.
