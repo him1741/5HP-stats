@@ -333,6 +333,11 @@ footer a { color: var(--ink-2); }
 .cd-date { font-size: 12px; font-weight: 600; color: var(--muted); }
 .cd-dmg { font-size: 14px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cd-n { font-size: 11.5px; color: var(--muted); }
+.cd-ev { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; max-width: 100%; font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #1b1630; background: var(--gold); border-radius: 5px; padding: 1px 6px; white-space: nowrap; overflow: hidden; }
+.cd-ev .ev-t { overflow: hidden; text-overflow: ellipsis; }
+.cal-day.future .cd-ev { background: rgba(246, 201, 76, .18); color: var(--gold); }
+.cs-ev { margin-top: 8px; display: inline-block; font-size: 13.5px; font-weight: 700; color: var(--gold); background: rgba(246, 201, 76, .12); border: 1px solid rgba(246, 201, 76, .4); border-radius: 7px; padding: 3px 10px; }
+.ev-key { display: flex; flex-wrap: wrap; gap: 4px 14px; flex-basis: 100%; color: var(--ink-2); }
 .lv0 { background: #1a1f3a; } .cal-day.lv0 { border-color: var(--line); } .cal-day.lv0 .cd-dmg { color: var(--muted); }
 .lv1 { background: #252b55; } .lv2 { background: #33337a; } .lv3 { background: #463c9e; }
 .lv4 { background: #5b47c2; } .lv5 { background: #7b5ee6; }
@@ -372,6 +377,7 @@ footer a { color: var(--ink-2); }
   .cal-row2 + .cal-row2 { margin-top: 4px; }
   .cal-heads { font-size: 10px; letter-spacing: 0; }
   .cal-wk .long, .cal-wk > span { display: none; }
+  .cd-ev { padding: 1px 3px; font-size: 12px; } .cd-ev .ev-t { display: none; }
   .cal-wk .short { display: inline; }
   .cal-wk b { font-size: 11px; letter-spacing: 0; }
   .cal-day { min-height: 44px; padding: 6px 4px; align-items: center; justify-content: center; }
@@ -874,6 +880,15 @@ footer a { color: var(--ink-2); }
     for (let i = 0; i < cur.len; i++) { const d = addDays(cur.start, i); if (d <= today) total += T.get(d)?.dmg || 0; }
     return `Season ${cur.number} · ${fmtDay(cur.start, { month: 'short', day: 'numeric' })} – ${fmtDay(end, { month: 'short', day: 'numeric' })} · ${fmtT(total)}${cur.current ? ' so far' : ' total'}`;
   }
+  // Big Battlefield dates. day = day of the season (the BL season starts on day 8, so BL day 5 = day 12).
+  const SEASON_EVENTS = [
+    { day: 12, icon: '⛰️', name: 'Mountain Pass 1', short: 'Pass 1' },
+    { day: 20, icon: '🏰', name: 'Capital 2', short: 'Capital 2' },
+    { day: 22, icon: '⛰️', name: 'Mountain Pass 2', short: 'Pass 2' },
+    { day: 28, icon: '🔥', name: 'Burning Expedition Throne', short: 'Throne' },
+  ];
+  const eventOn = (i) => SEASON_EVENTS.find((x) => x.day === i + 1);
+  const evTag = (ev) => ev ? `<span class="cd-ev" title="${ev.name} opens"><span aria-hidden="true">${ev.icon}</span><span class="ev-t">${ev.short}</span></span>` : '';
   function calendarHTML() {
     const { seasons, cur } = calCurrent();
     if (!cur) return '<p class="note">No daily data yet.</p>';
@@ -891,12 +906,13 @@ footer a { color: var(--ink-2); }
       const wk = days.slice(w * 7, w * 7 + 7);
       const wTotal = wk.reduce((t, d) => t + (d <= today ? T.get(d)?.dmg || 0 : 0), 0);
       const label = [`WEEK ${w + 1}`, `W${w + 1}`];
-      const cells = wk.map((d) => {
-        if (d > today) return `<div class="cal-day future"><span class="cd-date">${fmtDay(d, { month: 'short', day: 'numeric' })}</span></div>`;
+      const cells = wk.map((d, j) => {
+        const ev = eventOn(w * 7 + j), evc = ev ? ' ev' : '';
+        if (d > today) return `<div class="cal-day future${evc}"><span class="cd-date">${fmtDay(d, { month: 'short', day: 'numeric' })}</span>${evTag(ev)}</div>`;
         const e = T.get(d) || { dmg: 0, n: 0 };
         const lv = calShade === 'n' ? lvN(e.n) : lvDmg(e.dmg);
-        return `<button class="cal-day lv${lv}${d === calDay ? ' sel' : ''}${d === today ? ' today' : ''}" data-cal-day="${d}" aria-pressed="${d === calDay}">
-          <span class="cd-date">${fmtDay(d, { month: 'short', day: 'numeric' })}</span>
+        return `<button class="cal-day lv${lv}${evc}${d === calDay ? ' sel' : ''}${d === today ? ' today' : ''}" data-cal-day="${d}" aria-pressed="${d === calDay}">
+          <span class="cd-date">${fmtDay(d, { month: 'short', day: 'numeric' })}</span>${evTag(ev)}
           <span class="cd-dmg">${e.dmg > 0 ? fmtT(e.dmg) : '—'}</span>
           <span class="cd-n">${e.n ? e.n + ' fought' : 'no PvP'}</span></button>`;
       }).join('');
@@ -913,6 +929,7 @@ footer a { color: var(--ink-2); }
       <div class="cc-label">SELECTED DAY</div>
       <div class="cs-date">${fmtDay(calDay, { weekday: 'short', month: 'short', day: 'numeric' })}</div>
       <div class="cs-sub">Week ${wkNo + 1} · Day ${(i % 7) + 1}${calDay === today ? ' · today so far' : ''}</div>
+      ${eventOn(i) ? `<div class="cs-ev">${eventOn(i).icon} ${eventOn(i).name} opens</div>` : ''}
       <div class="cs-nums"><div><b>${fmtT(e.dmg)}</b><span>alliance damage</span></div><div><b>${e.n}</b><span>players fought</span></div></div>
       ${top3 ? `<div class="cc-label" style="margin-top:14px">TOP THAT DAY</div><div class="cs-list">${top3}</div>` : '<p class="note">No PvP that day.</p>'}
       <button class="cal-pill sq cs-open" data-open-day="${calDay}">See every player that day ›</button>
@@ -925,7 +942,7 @@ footer a { color: var(--ink-2); }
         <div class="cal-card cal-grid-card">
           <div class="cal-row2 cal-heads"><span></span>${heads}</div>
           ${rows}
-          <div class="cal-legend"><span>Less</span><span class="sw" aria-hidden="true"><i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i><i class="lv5"></i></span><span>${legend}</span><span class="tip">Gold outline = today · tap a day for its top players, double-tap for every player</span></div>
+          <div class="cal-legend"><span>Less</span><span class="sw" aria-hidden="true"><i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i><i class="lv5"></i></span><span>${legend}</span><span class="ev-key">${SEASON_EVENTS.map((x) => `<span>${x.icon} ${x.name} · day ${x.day}</span>`).join('')}</span><span class="tip">Gold outline = today · tap a day for its top players, double-tap for every player</span></div>
         </div>
         <aside class="cal-side">${sel}
           <section class="cal-card"><div class="cc-label">BUSIEST DAYS ${cur.current ? 'THIS SEASON' : 'IN SEASON ' + cur.number}</div><div class="cb-list">${busiest || '<p class="note">No PvP yet.</p>'}</div></section>
