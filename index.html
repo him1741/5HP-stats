@@ -389,6 +389,10 @@ footer a { color: var(--ink-2); }
 .hl-band.hl-hw .hl-rest, .hl-band.hl-p4p .hl-rest { flex-basis: 265px; }
 .hl-band.hl-hw .hl-intro, .hl-band.hl-p4p .hl-intro { flex-basis: 200px; }
 .hl-band.hl-hw .podium, .hl-band.hl-p4p .podium { flex-basis: 380px; }
+.when-link { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 2px; }
+.when-link:hover { color: var(--chip-ink); text-decoration-color: currentColor; }
+.when-link:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 3px; }
+.hl-rest .row .when-link { font-size: 12px; margin-left: 4px; color: var(--muted); }
 </style>
 <!--ARTIFACT-HEAD-END-->
 </head>
@@ -912,9 +916,9 @@ footer a { color: var(--ink-2); }
     const pod = (i) => {
       const x = list[i];
       if (!x) return `<div class="pod p${i + 1} empty"><div class="medal-big">${MED[i]}</div><div class="val">—</div><div class="step">${PL[i]}</div></div>`;
-      return `<div class="pod p${i + 1}"><div class="medal-big">${MED[i]}</div><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>${rankCell(x.rank)}<div class="val">${valueOf(x)}</div>${x.when ? `<div class="when">${x.when}</div>` : ''}<div class="step">${PL[i]}</div></div>`;
+      return `<div class="pod p${i + 1}"><div class="medal-big">${MED[i]}</div><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>${rankCell(x.rank)}<div class="val">${valueOf(x)}</div>${x.when ? `<button class="when when-link" data-open-day="${x.d}" title="See every player that day">${x.when}</button>` : ''}<div class="step">${PL[i]}</div></div>`;
     };
-    const rest = list.slice(3).map((x, k) => `<div class="row"><span><span class="p">${k + 4}.</span><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>${x.when ? ` <small class="when">${x.when}</small>` : ''}</span><b>${valueOf(x)}</b></div>`).join('');
+    const rest = list.slice(3).map((x, k) => `<div class="row"><span><span class="p">${k + 4}.</span><button class="name-btn" data-id="${x.id}">${esc(x.name)}</button>${x.when ? ` <button class="when when-link" data-open-day="${x.d}" title="See every player that day">${x.when}</button>` : ''}</span><b>${valueOf(x)}</b></div>`).join('');
     return `<section class="hl-band ${cls}">
       <div class="hl-intro"><div class="hl-emoji" aria-hidden="true">${emoji}</div><h3>${title}</h3><p>${subtitle}</p><p class="total">${total}</p></div>
       <div class="podium">${pod(1)}${pod(0)}${pod(2)}</div>
@@ -1180,7 +1184,11 @@ footer a { color: var(--ink-2); }
   document.addEventListener('click', (e) => { if (!exportMenu.hidden && !e.target.closest('.export')) closeExport(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !exportMenu.hidden) { closeExport(); exportBtn.focus(); } });
   $('#q').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
-  $('#highlights').addEventListener('click', (e) => { const n = e.target.closest('.name-btn'); if (n) openPlayer(n.dataset.id); });
+  $('#highlights').addEventListener('click', (e) => {
+    const o = e.target.closest('[data-open-day]');
+    if (o) { dailyDate = o.dataset.openDay === data.latest.gameDay ? null : o.dataset.openDay; setView('daily'); window.scrollTo({ top: document.querySelector('.tabs').offsetTop - 10 }); return; }
+    const n = e.target.closest('.name-btn'); if (n) openPlayer(n.dataset.id);
+  });
   $('#sec-extra').addEventListener('click', (e) => {
     const b = e.target.closest('[data-day-nav]'); if (!b) return;
     if (b.dataset.dayNav === 'today') { dailyDate = null; render(); } else moveDay(Number(b.dataset.dayNav));
